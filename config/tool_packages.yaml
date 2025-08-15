@@ -129,6 +129,14 @@ agile_management:
   - create_project
   - update_project
   - list_projects
+  # Asset Management
+  - create_asset
+  - update_asset
+  - get_asset
+  - list_assets
+  - delete_asset
+  - transfer_asset
+  - search_assets_by_name
 
 system_administrator:
   # User Management
@@ -142,6 +150,14 @@ system_administrator:
   - list_groups
   - add_group_members
   - remove_group_members
+  # Asset Management
+  - create_asset
+  - update_asset
+  - get_asset
+  - list_assets
+  - delete_asset
+  - transfer_asset
+  - search_assets_by_name
   # System Logs
   - list_syslog_entries
   - get_syslog_entry
@@ -258,3 +274,11 @@ full:
   - create_project
   - update_project
   - list_projects
+  # Asset Management
+  - create_asset
+  - update_asset
+  - get_asset
+  - list_assets
+  - delete_asset
+  - transfer_asset
+  - search_assets_by_name

@@ -20,6 +20,7 @@ This project implements an MCP server that enables Claude to connect to ServiceN
 - Execute ServiceNow scripts and workflows
 - Access and query the ServiceNow Service Catalog
 - Analyze and optimize the ServiceNow Service Catalog
+- Comprehensive asset management (create, update, transfer, delete assets)
 - Debug mode for troubleshooting
 - Support for both stdio and Server-Sent Events (SSE) communication
 
@@ -228,6 +229,16 @@ The default `config/tool_packages.yaml` includes the following role-based packag
 1. **create_project** - Create a new project in ServiceNow
 2. **update_project** - Update an existing project in ServiceNow
 3. **list_projects** - List projects from ServiceNow with filtering options
+
+#### Asset Management Tools
+
+1. **create_asset** - Create a new asset in ServiceNow with detailed attributes
+2. **update_asset** - Update an existing asset's information
+3. **get_asset** - Retrieve a specific asset by ID, tag, or serial number
+4. **list_assets** - List assets with flexible filtering and pagination
+5. **search_assets_by_name** - Search for assets by display name using LIKE matching
+6. **delete_asset** - Delete an asset from ServiceNow
+7. **transfer_asset** - Transfer an asset to a different user with audit trail
 
 #### Workflow Management Tools
 
@@ -449,6 +460,7 @@ Below are some example natural language queries you can use with Claude to inter
 
 The repository includes example scripts that demonstrate how to use the tools:
 
+- **examples/asset_management_demo.py**: Comprehensive demonstration of asset management features
 - **examples/catalog_optimization_example.py**: Demonstrates how to analyze and improve the ServiceNow Service Catalog
 - **examples/change_management_demo.py**: Shows how to create and manage change requests in ServiceNow
 
@@ -484,6 +496,7 @@ SERVICENOW_API_KEY=your-api-key
 
 Additional documentation is available in the `docs` directory:
 
+- [Asset Management](docs/asset_management.md) - Comprehensive guide to asset management features
 - [Catalog Integration](docs/catalog.md) - Detailed information about the Service Catalog integration
 - [Catalog Optimization](docs/catalog_optimization_plan.md) - Detailed plan for catalog optimization features
 - [Change Management](docs/change_management.md) - Detailed information about the Change Management tools

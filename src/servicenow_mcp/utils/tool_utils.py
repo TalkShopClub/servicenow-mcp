@@ -333,6 +333,24 @@ from servicenow_mcp.tools.project_tools import (
     update_project as update_project_tool,
     list_projects as list_projects_tool,
 )
+from servicenow_mcp.tools.asset_tools import (
+    CreateAssetParams,
+    UpdateAssetParams,
+    GetAssetParams,
+    ListAssetsParams,
+    DeleteAssetParams,
+    TransferAssetParams,
+    SearchAssetsByNameParams,
+)
+from servicenow_mcp.tools.asset_tools import (
+    create_asset as create_asset_tool,
+    update_asset as update_asset_tool,
+    get_asset as get_asset_tool,
+    list_assets as list_assets_tool,
+    delete_asset as delete_asset_tool,
+    transfer_asset as transfer_asset_tool,
+    search_assets_by_name as search_assets_by_name_tool,
+)
 
 # Define a type alias for the Pydantic models or dataclasses used for params
 ParamsModel = Type[Any]  # Use Type[Any] for broader compatibility initially
@@ -941,6 +959,56 @@ def get_tool_definitions(
             str,  # Expects JSON string
             "List projects from ServiceNow",
             "json",  # Tool returns list/dict
+        ),
+        # Asset Management Tools
+        "create_asset": (
+            create_asset_tool,
+            CreateAssetParams,
+            str,
+            "Create a new asset in ServiceNow",
+            "str",
+        ),
+        "update_asset": (
+            update_asset_tool,
+            UpdateAssetParams,
+            str,
+            "Update an existing asset in ServiceNow",
+            "str",
+        ),
+        "get_asset": (
+            get_asset_tool,
+            GetAssetParams,
+            Dict[str, Any],  # Expects dict
+            "Get a specific asset from ServiceNow",
+            "raw_dict",
+        ),
+        "list_assets": (
+            list_assets_tool,
+            ListAssetsParams,
+            Dict[str, Any],  # Expects dict
+            "List assets from ServiceNow",
+            "raw_dict",
+        ),
+        "delete_asset": (
+            delete_asset_tool,
+            DeleteAssetParams,
+            str,
+            "Delete an asset from ServiceNow",
+            "str",
+        ),
+        "transfer_asset": (
+            transfer_asset_tool,
+            TransferAssetParams,
+            str,
+            "Transfer an asset to a different user in ServiceNow",
+            "str",
+        ),
+        "search_assets_by_name": (
+            search_assets_by_name_tool,
+            SearchAssetsByNameParams,
+            Dict[str, Any],  # Expects dict
+            "Search for assets by display name using LIKE matching",
+            "raw_dict",
         ),
     }
     return tool_definitions
