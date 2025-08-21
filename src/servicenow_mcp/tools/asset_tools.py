@@ -116,6 +116,79 @@ class AssetResponse(BaseModel):
     asset_id: Optional[str] = Field(None, description="ID of the affected asset")
     asset_tag: Optional[str] = Field(None, description="Asset tag of the affected asset")
 
+class ListHardwareAssetsParams(BaseModel):
+    """Parameters for listing hardware assets."""
+    
+    limit: int = Field(10, description="Maximum number of assets to return")
+    offset: int = Field(0, description="Offset for pagination")
+    assigned_to: Optional[str] = Field(None, description="Filter by assigned user (sys_id or username)")
+    name: Optional[str] = Field(None, description="Search for hardware assets by display name using LIKE matching")
+    query: Optional[str] = Field(
+        None,
+        description="Search term that matches against asset tag, display name, serial number, or model",
+    )
+
+def list_hardware_assets(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: ListHardwareAssetsParams,
+) -> dict:
+    """
+    List hardware assets from ServiceNow.
+    """
+    # Build query parameters
+    api_url = f"{config.api_url}/table/alm_hardware"
+    query_params = {
+        "sysparm_limit": str(params.limit),
+        "sysparm_offset": str(params.offset),
+        "sysparm_display_value": "true",
+    }
+
+    # Build query
+    query_parts = []
+    if params.assigned_to:
+        # Resolve user if username is provided
+        user_id = _resolve_user_id(config, auth_manager, params.assigned_to)
+        if user_id:
+            query_parts.append(f"assigned_to={user_id}")
+        else:
+            # Try direct match if it's already a sys_id
+            query_parts.append(f"assigned_to={params.assigned_to}")
+    if params.name:
+        # Search by display name using LIKE matching
+        query_parts.append(f"display_nameLIKE{params.name}")
+    if params.query:
+        query_parts.append(f"^asset_tagLIKE{params.query}^ORdisplay_nameLIKE{params.query}^ORserial_numberLIKE{params.query}^ORmodelLIKE{params.query}")
+    
+    if query_parts:
+        query_params["sysparm_query"] = "^".join(query_parts)
+    
+    # Make request
+    
+    try:
+        response = requests.get(
+            api_url,
+            params=query_params,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+        
+        result = response.json().get("result", [])
+        
+        return {
+            "success": True,
+            "message": f"Found {len(result)} hardware assets",
+            "hardware_assets": result,
+            "count": len(result),
+        }
+        
+    except requests.RequestException as e:
+        logger.error(f"Failed to list hardware assets: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to list hardware assets: {str(e)}",
+        }
 
 def create_asset(
     config: ServerConfig,

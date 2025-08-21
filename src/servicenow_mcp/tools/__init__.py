@@ -9,6 +9,7 @@ from servicenow_mcp.tools.asset_tools import (
     get_asset,
     list_assets,
     delete_asset,
+    list_hardware_assets,
 )
 
 from servicenow_mcp.tools.catalog_optimization import (
@@ -240,6 +241,7 @@ __all__ = [
     "get_asset",
     "list_assets",
     "delete_asset",
+    "list_hardware_assets",
     
     # Future tools
     # "update_problem",

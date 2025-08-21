@@ -16,6 +16,7 @@ Requirements:
 import os
 import sys
 import json
+import asyncio
 from datetime import datetime, timedelta
 
 # Add the src directory to the path so we can import the ServiceNow MCP modules
@@ -27,24 +28,25 @@ from servicenow_mcp.utils.config import ServerConfig
 
 def load_config():
     """Load configuration from environment variables."""
-    instance_url = os.getenv('SERVICENOW_INSTANCE_URL')
-    username = os.getenv('SERVICENOW_USERNAME')
-    password = os.getenv('SERVICENOW_PASSWORD')
+    instance_url = os.getenv('SNOW_INSTANCE_URL')
+    username = os.getenv('SNOW_INSTANCE_UNAME')
+    password = os.getenv('SNOW_INSTANCE_PWD')
     
     if not all([instance_url, username, password]):
         print("Error: Missing required environment variables:")
-        print("- SERVICENOW_INSTANCE_URL")
-        print("- SERVICENOW_USERNAME") 
-        print("- SERVICENOW_PASSWORD")
+        print("- SNOW_INSTANCE_URL")
+        print("- SNOW_INSTANCE_UNAME") 
+        print("- SNOW_INSTANCE_PWD")
         sys.exit(1)
     
     return ServerConfig(
         instance_url=instance_url,
-        api_url=f"{instance_url}/api/now",
         auth={
             "type": "basic",
-            "username": username,
-            "password": password
+            "basic": {
+                "username": username,
+                "password": password
+            }
         },
         timeout=30
     )
@@ -71,7 +73,7 @@ def demo_create_asset(mcp_server):
     }
     
     print(f"Creating laptop asset with tag: {laptop_params['asset_tag']}")
-    result = mcp_server._call_tool_impl("create_asset", laptop_params)
+    result = asyncio.run(mcp_server._call_tool_impl("create_asset", laptop_params))
     print(f"Result: {result[0].text}")
     
     # Create a monitor asset
@@ -91,7 +93,7 @@ def demo_create_asset(mcp_server):
     }
     
     print(f"Creating monitor asset with tag: {monitor_params['asset_tag']}")
-    result = mcp_server._call_tool_impl("create_asset", monitor_params)
+    result = asyncio.run(mcp_server._call_tool_impl("create_asset", monitor_params))
     print(f"Result: {result[0].text}")
     
     return laptop_params['asset_tag'], monitor_params['asset_tag']
@@ -107,7 +109,7 @@ def demo_list_assets(mcp_server):
         "limit": 10,
         "query": "DEMO"
     }
-    result = mcp_server._call_tool_impl("list_assets", list_params)
+    result = asyncio.run(mcp_server._call_tool_impl("list_assets", list_params))
     print(f"Result: {result[0].text}")
     
     # List assets by category
@@ -116,7 +118,7 @@ def demo_list_assets(mcp_server):
         "limit": 10,
         "category": "Computer"
     }
-    result = mcp_server._call_tool_impl("list_assets", list_params)
+    result = asyncio.run(mcp_server._call_tool_impl("list_assets", list_params))
     print(f"Result: {result[0].text}")
     
     # List assets by name using the name parameter
@@ -125,7 +127,7 @@ def demo_list_assets(mcp_server):
         "limit": 10,
         "name": "Dell"
     }
-    result = mcp_server._call_tool_impl("list_assets", list_params)
+    result = asyncio.run(mcp_server._call_tool_impl("list_assets", list_params))
     print(f"Result: {result[0].text}")
     
     # List assets by state (in stock)
@@ -134,7 +136,66 @@ def demo_list_assets(mcp_server):
         "limit": 10,
         "state": "2"
     }
-    result = mcp_server._call_tool_impl("list_assets", list_params)
+    result = asyncio.run(mcp_server._call_tool_impl("list_assets", list_params))
+    print(f"Result: {result[0].text}")
+
+
+def demo_list_hardware_assets(mcp_server):
+    """Demonstrate hardware asset listing with various filters."""
+    print("\n=== Hardware Asset Listing Demo ===")
+    
+    # List all hardware assets (basic)
+    print("Listing all hardware assets (first 10):")
+    list_params = {
+        "limit": 10
+    }
+    result = asyncio.run(mcp_server._call_tool_impl("list_hardware_assets", list_params))
+    print(f"Result: {result[0].text}")
+    
+    # List hardware assets by name filter
+    print("\nListing hardware assets by name (Apple):")
+    list_params = {
+        "limit": 15,
+        "name": "Apple"
+    }
+    result = asyncio.run(mcp_server._call_tool_impl("list_hardware_assets", list_params))
+    print(f"Result: {result[0].text}")
+    
+    # List hardware assets by general query
+    print("\nSearching hardware assets with query (Macbook):")
+    list_params = {
+        "limit": 10,
+        "query": "Macbook"
+    }
+    result = asyncio.run(mcp_server._call_tool_impl("list_hardware_assets", list_params))
+    print(f"Result: {result[0].text}")
+    
+    # List hardware assets with pagination
+    print("\nListing hardware assets with pagination (offset 5, limit 5):")
+    list_params = {
+        "limit": 5,
+        "offset": 5
+    }
+    result = asyncio.run(mcp_server._call_tool_impl("list_hardware_assets", list_params))
+    print(f"Result: {result[0].text}")
+    
+    # List hardware assets assigned to a specific user (if any exist)
+    print("\nListing hardware assets assigned to admin user:")
+    list_params = {
+        "limit": 10,
+        "assigned_to": "admin"
+    }
+    result = asyncio.run(mcp_server._call_tool_impl("list_hardware_assets", list_params))
+    print(f"Result: {result[0].text}")
+    
+    # Demo search with multiple filters
+    print("\nSearching hardware assets with multiple filters (Apple + Macbook):")
+    list_params = {
+        "limit": 5,
+        "name": "Apple",
+        "query": "Macbook"
+    }
+    result = asyncio.run(mcp_server._call_tool_impl("list_hardware_assets", list_params))
     print(f"Result: {result[0].text}")
 
 
@@ -149,7 +210,7 @@ def demo_search_assets_by_name(mcp_server):
         "limit": 10,
         "exact_match": False
     }
-    result = mcp_server._call_tool_impl("search_assets_by_name", search_params)
+    result = asyncio.run(mcp_server._call_tool_impl("search_assets_by_name", search_params))
     print(f"Result: {result[0].text}")
     
     # Search for exact asset name
@@ -159,7 +220,7 @@ def demo_search_assets_by_name(mcp_server):
         "limit": 10,
         "exact_match": True
     }
-    result = mcp_server._call_tool_impl("search_assets_by_name", search_params)
+    result = asyncio.run(mcp_server._call_tool_impl("search_assets_by_name", search_params))
     print(f"Result: {result[0].text}")
     
     # Search for partial name
@@ -169,7 +230,7 @@ def demo_search_assets_by_name(mcp_server):
         "limit": 10,
         "exact_match": False
     }
-    result = mcp_server._call_tool_impl("search_assets_by_name", search_params)
+    result = asyncio.run(mcp_server._call_tool_impl("search_assets_by_name", search_params))
     print(f"Result: {result[0].text}")
 
 
@@ -181,7 +242,7 @@ def demo_get_asset(mcp_server, asset_tag):
     get_params = {
         "asset_tag": asset_tag
     }
-    result = mcp_server._call_tool_impl("get_asset", get_params)
+    result = asyncio.run(mcp_server._call_tool_impl("get_asset", get_params))
     print(f"Result: {result[0].text}")
     
     return json.loads(result[0].text)
@@ -198,7 +259,7 @@ def demo_update_asset(mcp_server, asset_tag):
         "location": "Building A, Floor 2, Desk 42",
         "comments": "Updated during asset management demo - now in use"
     }
-    result = mcp_server._call_tool_impl("update_asset", update_params)
+    result = asyncio.run(mcp_server._call_tool_impl("update_asset", update_params))
     print(f"Result: {result[0].text}")
 
 
@@ -217,7 +278,7 @@ def demo_transfer_asset(mcp_server, asset_tag):
         "transfer_reason": "Demo transfer for testing",
         "comments": "Transferring asset as part of asset management demonstration"
     }
-    result = mcp_server._call_tool_impl("transfer_asset", transfer_params)
+    result = asyncio.run(mcp_server._call_tool_impl("transfer_asset", transfer_params))
     print(f"Result: {result[0].text}")
 
 
@@ -230,7 +291,7 @@ def demo_delete_asset(mcp_server, asset_tag):
         "asset_id": asset_tag,
         "reason": "Cleanup after asset management demo"
     }
-    result = mcp_server._call_tool_impl("delete_asset", delete_params)
+    result = asyncio.run(mcp_server._call_tool_impl("delete_asset", delete_params))
     print(f"Result: {result[0].text}")
 
 
@@ -278,6 +339,9 @@ def main():
         print("\n=== Cleanup ===")
         demo_delete_asset(mcp_server, laptop_tag)
         demo_delete_asset(mcp_server, monitor_tag)
+
+        # Demo 9: List hardware assets
+        demo_list_hardware_assets(mcp_server)
         
         print("\n=== Demo Complete ===")
         print("Asset management demo completed successfully!")

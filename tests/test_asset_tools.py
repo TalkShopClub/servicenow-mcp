@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 import requests
+import os
 
 from servicenow_mcp.auth.auth_manager import AuthManager
 from servicenow_mcp.tools.asset_tools import (
@@ -14,6 +15,7 @@ from servicenow_mcp.tools.asset_tools import (
     UpdateAssetParams,
     GetAssetParams,
     ListAssetsParams,
+    ListHardwareAssetsParams,
     DeleteAssetParams,
     TransferAssetParams,
     SearchAssetsByNameParams,
@@ -21,6 +23,7 @@ from servicenow_mcp.tools.asset_tools import (
     update_asset,
     get_asset,
     list_assets,
+    list_hardware_assets,
     delete_asset,
     transfer_asset,
     search_assets_by_name,
@@ -35,10 +38,12 @@ class TestAssetTools(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
+        instance_url = os.environ.get("SNOW_INSTANCE_URL")
+        api_url = f"{instance_url}/api/now"
         self.config = ServerConfig(
-            instance_url="https://test.service-now.com",
-            api_url="https://test.service-now.com/api/now",
-            auth={"type": "basic", "username": "test", "password": "test"},
+            instance_url=instance_url,
+            api_url=api_url,
+            auth={"type": "basic", "username": os.environ.get("SNOW_INSTANCE_UNAME"), "password": os.environ.get("SNOW_INSTANCE_PWD")},
             timeout=30,
         )
         self.auth_manager = Mock(spec=AuthManager)
@@ -622,6 +627,297 @@ class TestAssetTools(unittest.TestCase):
         result = _resolve_asset_id(self.config, self.auth_manager, "INVALID_TAG")
 
         self.assertIsNone(result)
+
+    @patch("servicenow_mcp.tools.asset_tools.requests.get")
+    def test_list_hardware_assets_success(self, mock_get):
+        """Test successful hardware assets listing."""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {
+            "result": [
+                {
+                    "sys_id": "hw_asset1",
+                    "asset_tag": "HW001",
+                    "display_name": "Dell Server",
+                    "model": "Dell PowerEdge",
+                    "serial_number": "SN001",
+                },
+                {
+                    "sys_id": "hw_asset2",
+                    "asset_tag": "HW002", 
+                    "display_name": "HP Laptop",
+                    "model": "HP EliteBook",
+                    "serial_number": "SN002",
+                }
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        params = ListHardwareAssetsParams(limit=10)
+        result = list_hardware_assets(self.config, self.auth_manager, params)
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["count"], 2)
+        self.assertEqual(result["message"], "Found 2 hardware assets")
+        self.assertIn("hardware_assets", result)
+        self.assertEqual(len(result["hardware_assets"]), 2)
+
+        # Verify API call
+        mock_get.assert_called_once()
+        call_args = mock_get.call_args
+        self.assertEqual(call_args[0][0], f"{self.config.api_url}/table/alm_hardware")
+        self.assertIn("sysparm_limit", call_args[1]["params"])
+        self.assertEqual(call_args[1]["params"]["sysparm_limit"], "10")
+        self.assertEqual(call_args[1]["params"]["sysparm_display_value"], "true")
+
+    @patch("servicenow_mcp.tools.asset_tools._resolve_user_id")
+    @patch("servicenow_mcp.tools.asset_tools.requests.get")
+    def test_list_hardware_assets_with_assigned_to_filter(self, mock_get, mock_resolve_user):
+        """Test hardware assets listing with assigned_to filter."""
+        mock_resolve_user.return_value = "user_sys_id_123"
+        
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {
+            "result": [
+                {
+                    "sys_id": "hw_asset1",
+                    "asset_tag": "HW001",
+                    "display_name": "Dell Server",
+                    "assigned_to": "John Doe",
+                }
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        params = ListHardwareAssetsParams(
+            limit=20,
+            assigned_to="john.doe"
+        )
+
+        result = list_hardware_assets(self.config, self.auth_manager, params)
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["count"], 1)
+        
+        # Verify user resolution was called
+        mock_resolve_user.assert_called_once_with(self.config, self.auth_manager, "john.doe")
+        
+        # Verify query includes assigned_to filter
+        call_args = mock_get.call_args
+        query_param = call_args[1]["params"]["sysparm_query"]
+        self.assertEqual(query_param, "assigned_to=user_sys_id_123")
+
+    @patch("servicenow_mcp.tools.asset_tools._resolve_user_id")
+    @patch("servicenow_mcp.tools.asset_tools.requests.get")
+    def test_list_hardware_assets_user_not_resolved(self, mock_get, mock_resolve_user):
+        """Test hardware assets listing when assigned user cannot be resolved."""
+        mock_resolve_user.return_value = None
+        
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {
+            "result": [
+                {
+                    "sys_id": "hw_asset1",
+                    "asset_tag": "HW001",
+                    "display_name": "Dell Server",
+                }
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        params = ListHardwareAssetsParams(
+            assigned_to="invalid.user"
+        )
+
+        result = list_hardware_assets(self.config, self.auth_manager, params)
+
+        self.assertTrue(result["success"])
+        
+        # Verify it falls back to direct match when user resolution fails
+        call_args = mock_get.call_args
+        query_param = call_args[1]["params"]["sysparm_query"]
+        self.assertEqual(query_param, "assigned_to=invalid.user")
+
+    @patch("servicenow_mcp.tools.asset_tools.requests.get")
+    def test_list_hardware_assets_with_name_filter(self, mock_get):
+        """Test hardware assets listing with name filter."""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {
+            "result": [
+                {
+                    "sys_id": "hw_asset1",
+                    "asset_tag": "HW001",
+                    "display_name": "Dell PowerEdge Server",
+                }
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        params = ListHardwareAssetsParams(
+            name="Dell PowerEdge",
+            limit=15
+        )
+
+        result = list_hardware_assets(self.config, self.auth_manager, params)
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["count"], 1)
+        
+        # Verify the query includes name filter
+        call_args = mock_get.call_args
+        query_param = call_args[1]["params"]["sysparm_query"]
+        self.assertEqual(query_param, "display_nameLIKEDell PowerEdge")
+        self.assertEqual(call_args[1]["params"]["sysparm_limit"], "15")
+
+    @patch("servicenow_mcp.tools.asset_tools.requests.get")
+    def test_list_hardware_assets_with_query_filter(self, mock_get):
+        """Test hardware assets listing with general query filter."""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {
+            "result": [
+                {
+                    "sys_id": "hw_asset1",
+                    "asset_tag": "LAPTOP001",
+                    "display_name": "HP EliteBook",
+                    "serial_number": "SN12345",
+                }
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        params = ListHardwareAssetsParams(
+            query="LAPTOP",
+            limit=25
+        )
+
+        result = list_hardware_assets(self.config, self.auth_manager, params)
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["count"], 1)
+        
+        # Verify the query includes general search filter
+        call_args = mock_get.call_args
+        query_param = call_args[1]["params"]["sysparm_query"]
+        self.assertIn("asset_tagLIKELAPTOP", query_param)
+        self.assertIn("display_nameLIKELAPTOP", query_param)
+        self.assertIn("serial_numberLIKELAPTOP", query_param)
+        self.assertIn("modelLIKELAPTOP", query_param)
+
+    @patch("servicenow_mcp.tools.asset_tools._resolve_user_id")
+    @patch("servicenow_mcp.tools.asset_tools.requests.get")
+    def test_list_hardware_assets_with_multiple_filters(self, mock_get, mock_resolve_user):
+        """Test hardware assets listing with multiple filters."""
+        mock_resolve_user.return_value = "user_sys_id_456"
+        
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {
+            "result": [
+                {
+                    "sys_id": "hw_asset1",
+                    "asset_tag": "SERVER001",
+                    "display_name": "Dell PowerEdge Server",
+                    "assigned_to": "Jane Doe",
+                }
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        params = ListHardwareAssetsParams(
+            assigned_to="jane.doe",
+            name="Dell",
+            query="SERVER",
+            limit=5,
+            offset=10
+        )
+
+        result = list_hardware_assets(self.config, self.auth_manager, params)
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["count"], 1)
+        
+        # Verify all filters are combined properly
+        call_args = mock_get.call_args
+        query_param = call_args[1]["params"]["sysparm_query"]
+        self.assertIn("assigned_to=user_sys_id_456", query_param)
+        self.assertIn("display_nameLIKEDell", query_param)
+        self.assertIn("asset_tagLIKESERVER", query_param)
+        
+        # Verify pagination parameters
+        self.assertEqual(call_args[1]["params"]["sysparm_limit"], "5")
+        self.assertEqual(call_args[1]["params"]["sysparm_offset"], "10")
+
+    @patch("servicenow_mcp.tools.asset_tools.requests.get")
+    def test_list_hardware_assets_no_results(self, mock_get):
+        """Test hardware assets listing with no results."""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {"result": []}
+        mock_get.return_value = mock_response
+
+        params = ListHardwareAssetsParams(
+            name="Nonexistent Hardware",
+        )
+
+        result = list_hardware_assets(self.config, self.auth_manager, params)
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["count"], 0)
+        self.assertEqual(result["message"], "Found 0 hardware assets")
+        self.assertEqual(result["hardware_assets"], [])
+
+    @patch("servicenow_mcp.tools.asset_tools.requests.get")
+    def test_list_hardware_assets_api_error(self, mock_get):
+        """Test hardware assets listing with API error."""
+        mock_get.side_effect = requests.RequestException("Connection timeout")
+
+        params = ListHardwareAssetsParams(limit=10)
+        result = list_hardware_assets(self.config, self.auth_manager, params)
+
+        self.assertFalse(result["success"])
+        self.assertIn("Failed to list hardware assets", result["message"])
+        self.assertIn("Connection timeout", result["message"])
+
+    @patch("servicenow_mcp.tools.asset_tools.requests.get")
+    def test_list_hardware_assets_http_error(self, mock_get):
+        """Test hardware assets listing with HTTP error."""
+        mock_response = Mock()
+        mock_response.raise_for_status.side_effect = requests.HTTPError("403 Forbidden")
+        mock_get.return_value = mock_response
+
+        params = ListHardwareAssetsParams(limit=10)
+        result = list_hardware_assets(self.config, self.auth_manager, params)
+
+        self.assertFalse(result["success"])
+        self.assertIn("Failed to list hardware assets", result["message"])
+
+    def test_list_hardware_assets_params_validation(self):
+        """Test ListHardwareAssetsParams validation."""
+        # Test valid parameters
+        params = ListHardwareAssetsParams(
+            limit=20,
+            offset=5,
+            assigned_to="john.doe",
+            name="Dell Server",
+            query="SERVER"
+        )
+        self.assertEqual(params.limit, 20)
+        self.assertEqual(params.offset, 5)
+        self.assertEqual(params.assigned_to, "john.doe")
+        self.assertEqual(params.name, "Dell Server")
+        self.assertEqual(params.query, "SERVER")
+        
+        # Test default values
+        params_defaults = ListHardwareAssetsParams()
+        self.assertEqual(params_defaults.limit, 10)
+        self.assertEqual(params_defaults.offset, 0)
+        self.assertIsNone(params_defaults.assigned_to)
+        self.assertIsNone(params_defaults.name)
+        self.assertIsNone(params_defaults.query)
 
 
 if __name__ == "__main__":

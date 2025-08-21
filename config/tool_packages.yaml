@@ -139,6 +139,7 @@ agile_management:
   - delete_asset
   - transfer_asset
   - search_assets_by_name
+  - list_hardware_assets
 
 system_administrator:
   # User Management
@@ -160,7 +161,7 @@ system_administrator:
   - delete_asset
   - transfer_asset
   - search_assets_by_name
-  - list_alm_hardware
+  - list_hardware_assets
   # System Logs
   - list_syslog_entries
   - get_syslog_entry
@@ -287,3 +288,4 @@ full:
   - delete_asset
   - transfer_asset
   - search_assets_by_name
+  - list_hardware_assets
