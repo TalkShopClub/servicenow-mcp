@@ -351,6 +351,10 @@ from servicenow_mcp.tools.asset_tools import (
     transfer_asset as transfer_asset_tool,
     search_assets_by_name as search_assets_by_name_tool,
 )
+from servicenow_mcp.tools.record_tools import (
+    CreateProblemParams,
+    create_problem as create_problem_tool,
+)
 
 # Define a type alias for the Pydantic models or dataclasses used for params
 ParamsModel = Type[Any]  # Use Type[Any] for broader compatibility initially
@@ -1009,6 +1013,14 @@ def get_tool_definitions(
             Dict[str, Any],  # Expects dict
             "Search for assets by display name using LIKE matching",
             "raw_dict",
+        ),
+        # Problem Management Tools
+        "create_problem": (
+            create_problem_tool,
+            CreateProblemParams,
+            str,
+            "Create a new problem in ServiceNow",
+            "str",
         ),
     }
     return tool_definitions

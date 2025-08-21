@@ -120,7 +120,9 @@ from servicenow_mcp.tools.project_tools import (
     update_project,
     list_projects,
 )
-# from servicenow_mcp.tools.problem_tools import create_problem, update_problem
+from servicenow_mcp.tools.record_tools import (
+    create_problem,
+)
 # from servicenow_mcp.tools.request_tools import create_request, update_request
 
 __all__ = [
@@ -130,6 +132,9 @@ __all__ = [
     "add_comment",
     "resolve_incident",
     "list_incidents",
+    
+    # Problem tools
+    "create_problem",
     
     # Catalog tools
     "list_catalog_items",
@@ -237,7 +242,6 @@ __all__ = [
     "delete_asset",
     
     # Future tools
-    # "create_problem",
     # "update_problem",
     # "create_request",
     # "update_request",
