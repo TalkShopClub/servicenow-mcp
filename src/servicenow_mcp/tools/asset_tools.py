@@ -24,7 +24,7 @@ class CreateAssetParams(BaseModel):
     display_name: str = Field(..., description="Display name of the asset")
     model: Optional[str] = Field(None, description="Model number or name")
     serial_number: Optional[str] = Field(None, description="Serial number of the asset")
-    assigned_to: Optional[str] = Field(None, description="User assigned to the asset (sys_id or username)")
+    assigned_to: Optional[str] = Field(None, description="User assigned to the asset (sys_id)")
     location: Optional[str] = Field(None, description="Location of the asset")
     cost: Optional[str] = Field(None, description="Cost of the asset")
     purchase_date: Optional[str] = Field(None, description="Purchase date (YYYY-MM-DD)")
@@ -45,7 +45,7 @@ class UpdateAssetParams(BaseModel):
     display_name: Optional[str] = Field(None, description="Display name of the asset")
     model: Optional[str] = Field(None, description="Model number or name")
     serial_number: Optional[str] = Field(None, description="Serial number of the asset")
-    assigned_to: Optional[str] = Field(None, description="User assigned to the asset (sys_id or username)")
+    assigned_to: Optional[str] = Field(None, description="User assigned to the asset (sys_id)")
     location: Optional[str] = Field(None, description="Location of the asset")
     cost: Optional[str] = Field(None, description="Cost of the asset")
     purchase_date: Optional[str] = Field(None, description="Purchase date (YYYY-MM-DD)")
@@ -72,7 +72,7 @@ class ListAssetsParams(BaseModel):
 
     limit: int = Field(10, description="Maximum number of assets to return")
     offset: int = Field(0, description="Offset for pagination")
-    assigned_to: Optional[str] = Field(None, description="Filter by assigned user (sys_id or username)")
+    assigned_to: Optional[str] = Field(None, description="Filter by assigned user (sys_id of user)")
     state: Optional[str] = Field(None, description="Filter by asset state")
     category: Optional[str] = Field(None, description="Filter by category")
     location: Optional[str] = Field(None, description="Filter by location")
@@ -94,7 +94,7 @@ class TransferAssetParams(BaseModel):
     """Parameters for transferring an asset to a different user."""
 
     asset_id: str = Field(..., description="Asset ID (sys_id) or asset tag")
-    new_assigned_to: str = Field(..., description="New user to assign the asset to (sys_id or username)")
+    new_assigned_to: str = Field(..., description="New user to assign the asset to (sys_id)")
     transfer_reason: Optional[str] = Field(None, description="Reason for the transfer")
     comments: Optional[str] = Field(None, description="Additional comments about the transfer")
 
@@ -121,7 +121,7 @@ class ListHardwareAssetsParams(BaseModel):
     
     limit: int = Field(10, description="Maximum number of assets to return")
     offset: int = Field(0, description="Offset for pagination")
-    assigned_to: Optional[str] = Field(None, description="Filter by assigned user (sys_id or username)")
+    assigned_to: Optional[str] = Field(None, description="Filter by assigned user (sys_id)")
     name: Optional[str] = Field(None, description="Search for hardware assets by display name using LIKE matching")
     query: Optional[str] = Field(
         None,
