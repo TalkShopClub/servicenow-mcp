@@ -239,6 +239,10 @@ The default `config/tool_packages.yaml` includes the following role-based packag
 5. **search_assets_by_name** - Search for assets by display name using LIKE matching
 6. **delete_asset** - Delete an asset from ServiceNow
 7. **transfer_asset** - Transfer an asset to a different user with audit trail
+8. **list_hardware_assets** - List hardware assets from alm_hardware table with flexible filtering and pagination
+
+#### Problem Tools 
+1. **create_problem** - Create a new problem in ServiceNow
 
 #### Workflow Management Tools
 
