@@ -359,6 +359,16 @@ from servicenow_mcp.tools.record_tools import (
 from servicenow_mcp.tools.record_tools import (
     create_problem as create_problem_tool,
 )
+from servicenow_mcp.tools.request_tools import (
+    CreateItemRequestParams,
+    CreateRequestParams,
+    ListItemRequestsParams,
+)
+from servicenow_mcp.tools.request_tools import (
+    create_item_request as create_item_request_tool,
+    create_request as create_request_tool,
+    list_item_requests as list_item_requests_tool,
+)
 
 # Define a type alias for the Pydantic models or dataclasses used for params
 ParamsModel = Type[Any]  # Use Type[Any] for broader compatibility initially
@@ -1032,6 +1042,28 @@ def get_tool_definitions(
             ListHardwareAssetsParams,
             Dict[str, Any],  # Expects dict
             "List hardware assets from ServiceNow",
+            "raw_dict",
+        ),
+        # Request Management Tools
+        "create_item_request": (
+            create_item_request_tool,
+            CreateItemRequestParams,
+            str,
+            "Create a new item request in ServiceNow. This is used to create a request for a specific item. You can link multiple item requests to a single request object.",
+            "str",
+        ),
+        "create_request": (
+            create_request_tool,
+            CreateRequestParams,
+            str,
+            "Create a new request object in ServiceNow.",
+            "str",
+        ),
+        "list_item_requests": (
+            list_item_requests_tool,
+            ListItemRequestsParams,
+            Dict[str, Any],
+            "List item requests from ServiceNow",
             "raw_dict",
         ),
     }

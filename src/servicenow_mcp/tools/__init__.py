@@ -3,6 +3,12 @@ Tools module for the ServiceNow MCP server.
 """
 
 # Import tools as they are implemented
+from servicenow_mcp.tools.request_tools import (
+    create_item_request,
+    create_request,
+    list_item_requests,
+)
+
 from servicenow_mcp.tools.asset_tools import (
     create_asset,
     update_asset,
@@ -242,6 +248,11 @@ __all__ = [
     "list_assets",
     "delete_asset",
     "list_hardware_assets",
+
+    # Request tools
+    "create_item_request",
+    "create_request",
+    "list_item_requests",
     
     # Future tools
     # "update_problem",
