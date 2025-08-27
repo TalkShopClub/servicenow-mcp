@@ -9,6 +9,8 @@ from servicenow_mcp.tools.asset_tools import (
     get_asset,
     list_assets,
     delete_asset,
+    transfer_asset,
+    search_assets_by_name,
     list_hardware_assets,
 )
 
@@ -65,6 +67,9 @@ from servicenow_mcp.tools.knowledge_base import (
     publish_article,
     update_article,
     list_categories,
+    search_knowledge_base,
+    add_comment_to_kb,
+    create_service_request,
 )
 from servicenow_mcp.tools.script_include_tools import (
     create_script_include,
@@ -83,6 +88,7 @@ from servicenow_mcp.tools.user_tools import (
     add_group_members,
     remove_group_members,
     list_groups,
+    delete_user,
 )
 from servicenow_mcp.tools.workflow_tools import (
     activate_workflow,
@@ -123,6 +129,21 @@ from servicenow_mcp.tools.project_tools import (
 )
 from servicenow_mcp.tools.record_tools import (
     create_problem,
+)
+from servicenow_mcp.tools.hardware_ordering import (
+    browse_hardware_catalog,
+    submit_hardware_order,
+    track_hardware_orders,
+    cancel_hardware_order,
+    provision_hardware,
+    get_hardware_recommendations,
+)
+from servicenow_mcp.tools.warranty_tools import (
+    check_asset_warranty,
+    update_asset_warranty,
+    bulk_warranty_check,
+    validate_warranty_information,
+    generate_warranty_report,
 )
 # from servicenow_mcp.tools.request_tools import create_request, update_request
 
@@ -200,6 +221,9 @@ __all__ = [
     "publish_article",
     "list_articles",
     "get_article",
+    "search_knowledge_base",
+    "add_comment_to_kb",
+    "create_service_request",
     
     # User management tools
     "create_user",
@@ -211,6 +235,7 @@ __all__ = [
     "add_group_members",
     "remove_group_members",
     "list_groups",
+    "delete_user",
 
     # Story tools
     "create_story",
@@ -241,7 +266,24 @@ __all__ = [
     "get_asset",
     "list_assets",
     "delete_asset",
+    "transfer_asset",
+    "search_assets_by_name",
     "list_hardware_assets",
+    
+    # Hardware ordering tools
+    "browse_hardware_catalog",
+    "submit_hardware_order",
+    "track_hardware_orders",
+    "cancel_hardware_order",
+    "provision_hardware",
+    "get_hardware_recommendations",
+    
+    # Warranty management tools
+    "check_asset_warranty",
+    "update_asset_warranty",
+    "bulk_warranty_check",
+    "validate_warranty_information",
+    "generate_warranty_report",
     
     # Future tools
     # "update_problem",

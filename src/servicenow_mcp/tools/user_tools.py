@@ -74,6 +74,15 @@ class ListUsersParams(BaseModel):
     )
 
 
+class DeleteUserParams(BaseModel):
+    """Parameters for deleting a user."""
+    
+    user_id: Optional[str] = Field(None, description="User ID (sys_id) to delete")
+    user_name: Optional[str] = Field(None, description="Username to delete")
+    email: Optional[str] = Field(None, description="Email address of user to delete")
+    reason: Optional[str] = Field(None, description="Reason for deletion")
+
+
 class CreateGroupParams(BaseModel):
     """Parameters for creating a group."""
 
@@ -894,3 +903,74 @@ def remove_group_members(
         message=message,
         group_id=params.group_id,
     )
+
+
+def delete_user(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: DeleteUserParams,
+) -> dict:
+    """
+    Delete a user from ServiceNow.
+    
+    Args:
+        config: Server configuration.
+        auth_manager: Authentication manager.
+        params: Delete parameters.
+        
+    Returns:
+        Dictionary containing operation result.
+    """
+    # First find the user
+    user_sys_id = None
+    
+    if params.user_id:
+        user_sys_id = params.user_id
+    else:
+        # Find user by username or email
+        user_result = get_user(config, auth_manager, GetUserParams(
+            user_name=params.user_name,
+            email=params.email
+        ))
+        
+        if not user_result.get("success"):
+            return {
+                "success": False,
+                "message": f"User not found",
+                "user_id": None
+            }
+        
+        user_sys_id = user_result.get("user", {}).get("sys_id")
+    
+    if not user_sys_id:
+        return {
+            "success": False,
+            "message": "Cannot delete user: user ID not found",
+            "user_id": None
+        }
+    
+    # Delete the user
+    api_url = f"{config.api_url}/table/sys_user/{user_sys_id}"
+    
+    try:
+        response = requests.delete(
+            api_url,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+        
+        return {
+            "success": True,
+            "message": f"User deleted successfully",
+            "user_id": user_sys_id,
+            "reason": params.reason
+        }
+        
+    except requests.RequestException as e:
+        logger.error(f"Failed to delete user: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to delete user: {str(e)}",
+            "user_id": user_sys_id
+        }

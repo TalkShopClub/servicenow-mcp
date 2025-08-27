@@ -24,6 +24,8 @@ service_desk:
   # Knowledge Lookup
   - get_article
   - list_articles
+  # Knowledge Base Comments
+  - add_comment_to_kb
 
 catalog_builder:
   # Core Catalog
@@ -76,6 +78,8 @@ knowledge_author:
   - publish_article
   - list_articles
   - get_article
+  # Article Comments
+  - add_comment_to_kb
 
 platform_developer:
   # Script Includes
@@ -140,6 +144,19 @@ agile_management:
   - transfer_asset
   - search_assets_by_name
   - list_hardware_assets
+  # Hardware Ordering
+  - browse_hardware_catalog
+  - submit_hardware_order
+  - track_hardware_orders
+  - cancel_hardware_order
+  - provision_hardware
+  - get_hardware_recommendations
+  # Warranty Management
+  - check_asset_warranty
+  - update_asset_warranty
+  - bulk_warranty_check
+  - validate_warranty_information
+  - generate_warranty_report
 
 system_administrator:
   # User Management
@@ -162,6 +179,19 @@ system_administrator:
   - transfer_asset
   - search_assets_by_name
   - list_hardware_assets
+  # Hardware Ordering
+  - browse_hardware_catalog
+  - submit_hardware_order
+  - track_hardware_orders
+  - cancel_hardware_order
+  - provision_hardware
+  - get_hardware_recommendations
+  # Warranty Management
+  - check_asset_warranty
+  - update_asset_warranty
+  - bulk_warranty_check
+  - validate_warranty_information
+  - generate_warranty_report
   # System Logs
   - list_syslog_entries
   - get_syslog_entry
@@ -242,16 +272,21 @@ full:
   - publish_article
   - list_articles
   - get_article
+  - search_knowledge_base
+  - add_comment_to_kb
   # User Management
   - create_user
   - update_user
   - get_user
   - list_users
+  - delete_user
   - create_group
   - update_group
   - add_group_members
   - remove_group_members
   - list_groups
+  # Service Catalog
+  - create_service_request
   # Syslog
   - list_syslog_entries
   - get_syslog_entry
@@ -289,3 +324,10 @@ full:
   - transfer_asset
   - search_assets_by_name
   - list_hardware_assets
+  # Hardware Ordering
+  - browse_hardware_catalog
+  - submit_hardware_order
+  - track_hardware_orders
+  - cancel_hardware_order
+  - provision_hardware
+  - get_hardware_recommendations

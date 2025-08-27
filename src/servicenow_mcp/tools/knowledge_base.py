@@ -134,6 +134,43 @@ class ListCategoriesParams(BaseModel):
     query: Optional[str] = Field(None, description="Search query for categories")
 
 
+class SearchKnowledgeBaseParams(BaseModel):
+    """Parameters for searching knowledge base articles."""
+    
+    search_term: str = Field(..., description="Term to search for in articles")
+    knowledge_base: Optional[str] = Field(None, description="Filter by specific knowledge base name or ID")
+    limit: int = Field(10, description="Maximum number of articles to return")
+    offset: int = Field(0, description="Offset for pagination")
+    workflow_state: Optional[str] = Field(None, description="Filter by workflow state (e.g., published)")
+
+
+class AddCommentToKBParams(BaseModel):
+    """Parameters for adding a comment to a knowledge base article."""
+    
+    article_id: str = Field(..., description="ID of the article to comment on")
+    comment: str = Field(..., description="Comment text to add")
+    is_work_note: bool = Field(False, description="Whether the comment is a work note (internal)")
+
+
+class DeleteUserParams(BaseModel):
+    """Parameters for deleting a user."""
+    
+    user_id: Optional[str] = Field(None, description="User ID (sys_id) to delete")
+    user_name: Optional[str] = Field(None, description="Username to delete")
+    email: Optional[str] = Field(None, description="Email address of user to delete")
+
+
+class CreateServiceRequestParams(BaseModel):
+    """Parameters for creating a service catalog request."""
+    
+    catalog_item: str = Field(..., description="Catalog item name or sys_id to request")
+    requested_for: Optional[str] = Field(None, description="User sys_id the request is for")
+    quantity: int = Field(1, description="Number of items to request")
+    short_description: Optional[str] = Field(None, description="Short description for the request")
+    description: Optional[str] = Field(None, description="Detailed description for the request")
+    variables: Optional[Dict[str, Any]] = Field(None, description="Variables for the catalog item")
+
+
 def create_knowledge_base(
     config: ServerConfig,
     auth_manager: AuthManager,
@@ -972,3 +1009,433 @@ def list_categories(
             "limit": params.limit,
             "offset": params.offset,
         } 
+
+
+class AddCommentParams(BaseModel):
+    """Parameters for adding a comment to a knowledge article."""
+
+    article_id: str = Field(..., description="ID of the article to add the comment to")
+    comment: str = Field(..., description="The comment text")
+    is_work_note: bool = Field(False, description="Whether the comment is a work note")
+
+
+class CommentResponse(BaseModel):
+    """Response from comment operations."""
+
+    success: bool = Field(..., description="Whether the operation was successful")
+    message: str = Field(..., description="Message describing the result")
+    article_id: Optional[str] = Field(None, description="ID of the article the comment was added to")
+    comment_id: Optional[str] = Field(None, description="ID of the added comment")
+
+
+class GetCommentsParams(BaseModel):
+    """Parameters for retrieving comments from a knowledge article."""
+
+    article_id: str = Field(..., description="ID of the article to get comments from")
+    limit: int = Field(10, description="Maximum number of comments to return")
+    offset: int = Field(0, description="Offset for pagination")
+
+
+class CommentsListResponse(BaseModel):
+    """Response from listing comments operations."""
+
+    success: bool = Field(..., description="Whether the operation was successful")
+    message: str = Field(..., description="Message describing the result")
+    article_id: Optional[str] = Field(None, description="ID of the article")
+    comments: list = Field(default_factory=list, description="List of comments")
+    count: int = Field(0, description="Number of comments returned")
+
+
+def add_comment(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: AddCommentParams,
+) -> CommentResponse:
+    """
+    Add a comment to a knowledge article.
+
+    Args:
+        config: Server configuration.
+        auth_manager: Authentication manager.
+        params: Parameters for adding the comment.
+
+    Returns:
+        Response with the comment details.
+    """
+    api_url = f"{config.api_url}/table/kb_knowledge/{params.article_id}"
+
+    # Build request data
+    data = {}
+    
+    if params.is_work_note:
+        # Add as work notes
+        data["work_notes"] = params.comment
+    else:
+        # Add as comments
+        data["comments"] = params.comment
+
+    # Make request
+    try:
+        response = requests.patch(
+            api_url,
+            json=data,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+
+        result = response.json().get("result", {})
+
+        return CommentResponse(
+            success=True,
+            message="Comment added successfully",
+            article_id=params.article_id,
+            comment_id=result.get("sys_id"),  # This will be the article's sys_id
+        )
+
+    except requests.RequestException as e:
+        logger.error(f"Failed to add comment: {e}")
+        return CommentResponse(
+            success=False,
+            message=f"Failed to add comment: {str(e)}",
+        )
+
+
+def get_comments(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: GetCommentsParams,
+) -> CommentsListResponse:
+    """
+    Get comments from a knowledge article using the ServiceNow journal field API.
+
+    Args:
+        config: Server configuration.
+        auth_manager: Authentication manager.
+        params: Parameters for getting comments.
+
+    Returns:
+        Response with the list of comments.
+    """
+    # Query the sys_journal_field table for comments on this article
+    api_url = f"{config.api_url}/table/sys_journal_field"
+
+    # Build query parameters
+    query_params = {
+        "sysparm_limit": params.limit,
+        "sysparm_offset": params.offset,
+        "sysparm_display_value": "all",
+        "sysparm_query": f"element_id={params.article_id}^element=comments^ORwork_notes={params.article_id}",
+        "sysparm_fields": "sys_id,element,element_id,value,sys_created_on,sys_created_by",
+    }
+
+    # Make request
+    try:
+        response = requests.get(
+            api_url,
+            params=query_params,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+
+        # Get the JSON response
+        json_response = response.json()
+        
+        # Safely extract the result
+        if isinstance(json_response, dict) and "result" in json_response:
+            result = json_response.get("result", [])
+        else:
+            logger.error("Unexpected response format: %s", json_response)
+            return CommentsListResponse(
+                success=False,
+                message="Unexpected response format",
+                article_id=params.article_id,
+            )
+
+        # Transform the results
+        comments = []
+        
+        if isinstance(result, list):
+            for comment_item in result:
+                if not isinstance(comment_item, dict):
+                    logger.warning("Skipping non-dictionary comment item: %s", comment_item)
+                    continue
+                    
+                # Extract comment details
+                comment_id = comment_item.get("sys_id", "")
+                comment_text = comment_item.get("value", "")
+                element_type = comment_item.get("element", "")
+                created_on = comment_item.get("sys_created_on", "")
+                
+                # Extract created by user safely
+                created_by = ""
+                created_by_field = comment_item.get("sys_created_by")
+                if isinstance(created_by_field, dict):
+                    created_by = created_by_field.get("display_value", "")
+                elif isinstance(created_by_field, str):
+                    created_by = created_by_field
+                
+                comments.append({
+                    "id": comment_id,
+                    "text": comment_text,
+                    "type": element_type,  # "comments" or "work_notes"
+                    "created_on": created_on,
+                    "created_by": created_by,
+                })
+
+        return CommentsListResponse(
+            success=True,
+            message=f"Found {len(comments)} comments",
+            article_id=params.article_id,
+            comments=comments,
+            count=len(comments),
+        )
+
+    except requests.RequestException as e:
+        logger.error(f"Failed to get comments: {e}")
+        return CommentsListResponse(
+            success=False,
+            message=f"Failed to get comments: {str(e)}",
+            article_id=params.article_id,
+        )
+
+
+def search_knowledge_base(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: SearchKnowledgeBaseParams,
+) -> Dict[str, Any]:
+    """
+    Search for knowledge base articles by term.
+    
+    Args:
+        config: Server configuration.
+        auth_manager: Authentication manager.
+        params: Search parameters.
+        
+    Returns:
+        Dictionary containing search results.
+    """
+    api_url = f"{config.api_url}/table/kb_knowledge"
+    
+    # Build query parameters
+    query_parts = []
+    
+    # Add search term query - search in title, short_description, and text
+    if params.search_term:
+        search_query = (
+            f"short_descriptionLIKE{params.search_term}^OR"
+            f"titleLIKE{params.search_term}^OR"
+            f"textLIKE{params.search_term}"
+        )
+        query_parts.append(search_query)
+    
+    # Filter by knowledge base
+    if params.knowledge_base:
+        # Check if it's a name or ID
+        if params.knowledge_base.startswith("Company Protocols") or "protocol" in params.knowledge_base.lower():
+            kb_query = f"kb_knowledge_base.title={params.knowledge_base}"
+        else:
+            kb_query = f"kb_knowledge_base={params.knowledge_base}"
+        query_parts.append(kb_query)
+    
+    # Filter by workflow state
+    if params.workflow_state:
+        query_parts.append(f"workflow_state={params.workflow_state}")
+    
+    query_string = "^".join(query_parts) if query_parts else ""
+    
+    query_params = {
+        "sysparm_limit": params.limit,
+        "sysparm_offset": params.offset,
+        "sysparm_display_value": "all",
+        "sysparm_fields": "sys_id,number,title,short_description,text,kb_knowledge_base,workflow_state,sys_created_on"
+    }
+    
+    if query_string:
+        query_params["sysparm_query"] = query_string
+    
+    try:
+        response = requests.get(
+            api_url,
+            params=query_params,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+        
+        result = response.json()
+        articles = result.get("result", [])
+        
+        return {
+            "success": True,
+            "message": f"Found {len(articles)} articles matching '{params.search_term}'",
+            "articles": articles,
+            "count": len(articles)
+        }
+        
+    except requests.RequestException as e:
+        logger.error(f"Failed to search knowledge base: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to search knowledge base: {str(e)}",
+            "articles": [],
+            "count": 0
+        }
+
+
+def add_comment_to_kb(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: AddCommentToKBParams,
+) -> Dict[str, Any]:
+    """
+    Add a comment to a knowledge base article.
+    
+    Args:
+        config: Server configuration.
+        auth_manager: Authentication manager.
+        params: Comment parameters.
+        
+    Returns:
+        Dictionary containing operation result.
+    """
+    api_url = f"{config.api_url}/table/kb_knowledge/{params.article_id}"
+    
+    # Prepare the data based on comment type
+    if params.is_work_note:
+        data = {"work_notes": params.comment}
+    else:
+        data = {"comments": params.comment}
+    
+    try:
+        response = requests.patch(
+            api_url,
+            json=data,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+        
+        return {
+            "success": True,
+            "message": f"Comment added to article {params.article_id}",
+            "article_id": params.article_id,
+            "comment_type": "work_note" if params.is_work_note else "comment"
+        }
+        
+    except requests.RequestException as e:
+        logger.error(f"Failed to add comment to knowledge base: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to add comment: {str(e)}",
+            "article_id": params.article_id
+        }
+
+
+def create_service_request(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: CreateServiceRequestParams,
+) -> Dict[str, Any]:
+    """
+    Create a service catalog request.
+    
+    Args:
+        config: Server configuration.
+        auth_manager: Authentication manager.
+        params: Request parameters.
+        
+    Returns:
+        Dictionary containing operation result.
+    """
+    # First, find the catalog item
+    catalog_api_url = f"{config.api_url}/table/sc_cat_item"
+    catalog_query_params = {
+        "sysparm_query": f"nameLIKE{params.catalog_item}^ORsys_id={params.catalog_item}",
+        "sysparm_limit": "1",
+        "sysparm_fields": "sys_id,name,short_description"
+    }
+    
+    try:
+        # Find catalog item
+        catalog_response = requests.get(
+            catalog_api_url,
+            params=catalog_query_params,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        catalog_response.raise_for_status()
+        
+        catalog_results = catalog_response.json().get("result", [])
+        if not catalog_results:
+            return {
+                "success": False,
+                "message": f"Catalog item '{params.catalog_item}' not found",
+                "request_id": None
+            }
+        
+        catalog_item_id = catalog_results[0]["sys_id"]
+        catalog_item_name = catalog_results[0]["name"]
+        
+        # Create the service request
+        request_api_url = f"{config.api_url}/table/sc_request"
+        request_data = {
+            "short_description": params.short_description or f"Request for {catalog_item_name}",
+            "description": params.description or f"Service catalog request for {catalog_item_name}",
+        }
+        
+        if params.requested_for:
+            request_data["requested_for"] = params.requested_for
+        
+        request_response = requests.post(
+            request_api_url,
+            json=request_data,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        request_response.raise_for_status()
+        
+        request_result = request_response.json().get("result", {})
+        request_id = request_result.get("sys_id")
+        request_number = request_result.get("number")
+        
+        # Create request item
+        request_item_api_url = f"{config.api_url}/table/sc_req_item"
+        request_item_data = {
+            "request": request_id,
+            "cat_item": catalog_item_id,
+            "quantity": params.quantity,
+            "short_description": params.short_description or f"Request for {catalog_item_name}",
+        }
+        
+        if params.requested_for:
+            request_item_data["requested_for"] = params.requested_for
+        
+        item_response = requests.post(
+            request_item_api_url,
+            json=request_item_data,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        item_response.raise_for_status()
+        
+        item_result = item_response.json().get("result", {})
+        
+        return {
+            "success": True,
+            "message": f"Service request {request_number} created successfully",
+            "request_id": request_id,
+            "request_number": request_number,
+            "item_id": item_result.get("sys_id"),
+            "catalog_item": catalog_item_name
+        }
+        
+    except requests.RequestException as e:
+        logger.error(f"Failed to create service request: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to create service request: {str(e)}",
+            "request_id": None
+        }

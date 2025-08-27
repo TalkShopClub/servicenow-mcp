@@ -146,6 +146,13 @@ from servicenow_mcp.tools.knowledge_base import (
     ListKnowledgeBasesParams,
     PublishArticleParams,
     UpdateArticleParams,
+    AddCommentParams,
+    CommentResponse,
+    GetCommentsParams,
+    CommentsListResponse,
+    SearchKnowledgeBaseParams,
+    AddCommentToKBParams,
+    CreateServiceRequestParams,
 )
 from servicenow_mcp.tools.knowledge_base import (
     CreateCategoryParams as CreateKBCategoryParams,  # Aliased
@@ -175,6 +182,21 @@ from servicenow_mcp.tools.knowledge_base import (
 )
 from servicenow_mcp.tools.knowledge_base import (
     update_article as update_article_tool,
+)
+from servicenow_mcp.tools.knowledge_base import (
+    add_comment as add_comment_to_kb_tool,
+)
+from servicenow_mcp.tools.knowledge_base import (
+    get_comments as get_comments_from_kb_tool,
+)
+from servicenow_mcp.tools.knowledge_base import (
+    search_knowledge_base as search_knowledge_base_tool,
+)
+from servicenow_mcp.tools.knowledge_base import (
+    add_comment_to_kb as add_comment_to_kb_new_tool,
+)
+from servicenow_mcp.tools.knowledge_base import (
+    create_service_request as create_service_request_tool,
 )
 from servicenow_mcp.tools.script_include_tools import (
     CreateScriptIncludeParams,
@@ -209,6 +231,7 @@ from servicenow_mcp.tools.user_tools import (
     RemoveGroupMembersParams,
     UpdateGroupParams,
     UpdateUserParams,
+    DeleteUserParams,
 )
 from servicenow_mcp.tools.user_tools import (
     add_group_members as add_group_members_tool,
@@ -236,6 +259,9 @@ from servicenow_mcp.tools.user_tools import (
 )
 from servicenow_mcp.tools.user_tools import (
     update_user as update_user_tool,
+)
+from servicenow_mcp.tools.user_tools import (
+    delete_user as delete_user_tool,
 )
 from servicenow_mcp.tools.workflow_tools import (
     ActivateWorkflowParams,
@@ -360,6 +386,62 @@ from servicenow_mcp.tools.record_tools import (
     create_problem as create_problem_tool,
 )
 
+# Import additional tools that may be needed for edit knowledge base tasks
+from servicenow_mcp.tools.asset_tools import (
+    ListHardwareAssetsParams,
+)
+from servicenow_mcp.tools.asset_tools import (
+    list_hardware_assets as list_hardware_assets_tool,
+)
+from servicenow_mcp.tools.hardware_ordering import (
+    BrowseHardwareCatalogParams,
+    SubmitHardwareOrderParams,
+    TrackHardwareOrderParams,
+    CancelHardwareOrderParams,
+    ProvisionHardwareParams,
+    GetHardwareRecommendationsParams,
+)
+from servicenow_mcp.tools.hardware_ordering import (
+    browse_hardware_catalog as browse_hardware_catalog_tool,
+)
+from servicenow_mcp.tools.hardware_ordering import (
+    submit_hardware_order as submit_hardware_order_tool,
+)
+from servicenow_mcp.tools.hardware_ordering import (
+    track_hardware_orders as track_hardware_orders_tool,
+)
+from servicenow_mcp.tools.hardware_ordering import (
+    cancel_hardware_order as cancel_hardware_order_tool,
+)
+from servicenow_mcp.tools.hardware_ordering import (
+    provision_hardware as provision_hardware_tool,
+)
+from servicenow_mcp.tools.hardware_ordering import (
+    get_hardware_recommendations as get_hardware_recommendations_tool,
+)
+from servicenow_mcp.tools.warranty_tools import (
+    CheckAssetWarrantyParams,
+    UpdateAssetWarrantyParams,
+    BulkWarrantyCheckParams,
+    WarrantyValidationParams,
+    WarrantyReportParams,
+)
+from servicenow_mcp.tools.warranty_tools import (
+    check_asset_warranty as check_asset_warranty_tool,
+)
+from servicenow_mcp.tools.warranty_tools import (
+    update_asset_warranty as update_asset_warranty_tool,
+)
+from servicenow_mcp.tools.warranty_tools import (
+    bulk_warranty_check as bulk_warranty_check_tool,
+)
+from servicenow_mcp.tools.warranty_tools import (
+    validate_warranty_information as validate_warranty_information_tool,
+)
+from servicenow_mcp.tools.warranty_tools import (
+    generate_warranty_report as generate_warranty_report_tool,
+)
+
 # Define a type alias for the Pydantic models or dataclasses used for params
 ParamsModel = Type[Any]  # Use Type[Any] for broader compatibility initially
 
@@ -401,7 +483,7 @@ def get_tool_definitions(
             "Update an existing incident in ServiceNow",
             "str",
         ),
-        "add_comment": (
+        "add_comment_to_incident": (
             add_comment_tool,
             AddCommentParams,
             str,
@@ -787,6 +869,34 @@ def get_tool_definitions(
             "Get a specific knowledge article by ID",
             "raw_dict",  # Tool returns raw dict
         ),
+        "add_comment_to_kb": (
+            add_comment_to_kb_tool,
+            AddCommentParams,
+            CommentResponse,  # Expects Pydantic model
+            "Add a comment to a knowledge base article",
+            "raw_pydantic",  # Tool returns Pydantic model
+        ),
+        "get_comments_from_kb": (
+            get_comments_from_kb_tool,
+            GetCommentsParams,
+            CommentsListResponse,  # Expects Pydantic model
+            "Get comments from a knowledge base article",
+            "raw_pydantic",  # Tool returns Pydantic model
+        ),
+        "search_knowledge_base": (
+            search_knowledge_base_tool,
+            SearchKnowledgeBaseParams,
+            Dict[str, Any],  # Expects dict
+            "Search for knowledge base articles by term",
+            "raw_dict",  # Tool returns raw dict
+        ),
+        "create_service_request": (
+            create_service_request_tool,
+            CreateServiceRequestParams,
+            Dict[str, Any],  # Expects dict
+            "Create a service catalog request",
+            "raw_dict",  # Tool returns raw dict
+        ),
         # Use the passed-in implementations for aliased KB category tools
         "list_categories": (
             list_kb_categories_tool_impl,  # Use passed function
@@ -822,6 +932,13 @@ def get_tool_definitions(
             ListUsersParams,
             Dict[str, Any],  # Expects dict
             "List users in ServiceNow",
+            "raw_dict",
+        ),
+        "delete_user": (
+            delete_user_tool,
+            DeleteUserParams,
+            Dict[str, Any],  # Expects dict
+            "Delete a user from ServiceNow",
             "raw_dict",
         ),
         "create_group": (
@@ -1032,6 +1149,87 @@ def get_tool_definitions(
             ListHardwareAssetsParams,
             Dict[str, Any],  # Expects dict
             "List hardware assets from ServiceNow",
+            "raw_dict",
+        ),
+        
+        # Hardware Ordering Tools
+        "browse_hardware_catalog": (
+            browse_hardware_catalog_tool,
+            BrowseHardwareCatalogParams,
+            Dict[str, Any],  # Expects dict
+            "Browse available hardware items in the Service Catalog",
+            "raw_dict",
+        ),
+        "submit_hardware_order": (
+            submit_hardware_order_tool,
+            SubmitHardwareOrderParams,
+            Dict[str, Any],  # Expects dict
+            "Submit a hardware order through ServiceNow Service Catalog",
+            "raw_dict",
+        ),
+        "track_hardware_orders": (
+            track_hardware_orders_tool,
+            TrackHardwareOrderParams,
+            Dict[str, Any],  # Expects dict
+            "Track hardware orders and their status",
+            "raw_dict",
+        ),
+        "cancel_hardware_order": (
+            cancel_hardware_order_tool,
+            CancelHardwareOrderParams,
+            Dict[str, Any],  # Expects dict
+            "Cancel a hardware order",
+            "raw_dict",
+        ),
+        "provision_hardware": (
+            provision_hardware_tool,
+            ProvisionHardwareParams,
+            Dict[str, Any],  # Expects dict
+            "Provision hardware for an approved order by creating the asset record",
+            "raw_dict",
+        ),
+        "get_hardware_recommendations": (
+            get_hardware_recommendations_tool,
+            GetHardwareRecommendationsParams,
+            Dict[str, Any],  # Expects dict
+            "Get hardware recommendations based on user role and department",
+            "raw_dict",
+        ),
+        
+        # Warranty Management Tools
+        "check_asset_warranty": (
+            check_asset_warranty_tool,
+            CheckAssetWarrantyParams,
+            Dict[str, Any],  # Expects dict
+            "Check warranty status of a hardware asset from external APIs and ServiceNow records",
+            "raw_dict",
+        ),
+        "update_asset_warranty": (
+            update_asset_warranty_tool,
+            UpdateAssetWarrantyParams,
+            Dict[str, Any],  # Expects dict
+            "Update warranty information for a hardware asset in ServiceNow",
+            "raw_dict",
+        ),
+        "bulk_warranty_check": (
+            bulk_warranty_check_tool,
+            BulkWarrantyCheckParams,
+            Dict[str, Any],  # Expects dict
+            "Perform warranty checks across multiple assets",
+            "raw_dict",
+        ),
+        "validate_warranty_information": (
+            validate_warranty_information_tool,
+            WarrantyValidationParams,
+            Dict[str, Any],  # Expects dict
+            "Validate warranty information for an asset and check for expiration alerts",
+            "raw_dict",
+        ),
+        "generate_warranty_report": (
+            generate_warranty_report_tool,
+            WarrantyReportParams,
+            Dict[str, Any],  # Expects dict
+            "Generate comprehensive warranty reports for assets",
             "raw_dict",
         ),
     }
