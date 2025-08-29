@@ -71,7 +71,7 @@ class GetAssetParams(BaseModel):
 class ListAssetsParams(BaseModel):
     """Parameters for listing assets."""
 
-    limit: int = Field(100, description="Maximum number of assets to return")
+    limit: int = Field(10, description="Maximum number of assets to return")
     offset: int = Field(0, description="Offset for pagination")
     assigned_to: Optional[List[str]] = Field(None, description="List of sys_ids or names of users that have been assigned an asset. ")
     location: Optional[str] = Field(None, description="Filter by location")

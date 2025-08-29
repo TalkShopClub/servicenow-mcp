@@ -86,19 +86,6 @@ class MoveCatalogItemsParams(BaseModel):
     item_ids: List[str] = Field(..., description="List of catalog item IDs to move")
     target_category_id: str = Field(..., description="Target category ID to move items to")
 
-def _get_default_configuration(item_identifier): 
-    catalog_item_sys_ids = {
-        "Developer Laptop (Mac)": "774906834fbb4200086eeed18110c737",
-        "iPad mini": "e8d5f2f29792cd1021983d1e6253af31", 
-        "iPad pro": "c3b9cbf29716cd1021983d1e6253afad",
-        "Sales Laptop": "e212a942c0a80165008313c59764eea1",
-        "Standard Laptop": "04b7e94b4f7b4200086eeed18110c7fd",
-        "Apple Watch": "4a17d6a3ff133100ba13ffffffffffe7",
-        "Apple MacBook Pro 15": "2ab7077237153000158bbfc8bcbe5da9",  # Note: Name is "Apple MacBook Pro 15"" in ServiceNow
-        "Development Laptop (PC)": "3cecd2350a0a0a6a013a3a35a5e41c07",
-        "Loaner Laptop": "10f110aec611227601fbe1841e7e417c"  # Note: sys_name is "Notebook Computer Loaner"
-    }
-
 def order_catalog_item(
     config: ServerConfig,
     auth_manager: AuthManager,
@@ -142,7 +129,7 @@ def order_catalog_item(
 
     # Make API call 
     try:     
-        url = f"{config.instance_url}api/sn_sc/servicecatalog/items/{catalog_item_id}/order_now"
+        url = f"{config.instance_url}/api/sn_sc/servicecatalog/items/{catalog_item_id}/order_now"
         session = requests.Session()
         session.auth = (auth_manager.config.basic.username, auth_manager.config.basic.password)
         session.headers.update(auth_manager.get_headers())
