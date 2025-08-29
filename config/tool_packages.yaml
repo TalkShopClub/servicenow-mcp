@@ -182,6 +182,7 @@ full:
   - get_catalog_item
   - create_catalog_item
   - update_catalog_item
+  - order_catalog_item
   # Catalog (Categories)
   - list_catalog_categories
   - create_catalog_category
@@ -291,5 +292,4 @@ full:
   - list_hardware_assets
   # Request Management 
   - create_item_request
-  - create_request
   - list_item_requests

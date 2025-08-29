@@ -145,6 +145,27 @@ params = GetCatalogItemParams(
 result = get_catalog_item(config, auth_manager, params)
 ```
 
+### `order_catalog_item`
+
+Orders a service catalog item from ServiceNow.
+
+**Parameters:**
+- `item` (string, required): Name or sys_id of the catalog item to order. sys_id is preferred.
+- `quantity` (string, required): Quantity of the catalog item to order
+- `requested_for` (string, optional): Name or sys_id of the person requesting the item. sys_id is preferred. If not provided, defaults to empty string.
+
+**Example:**
+```python
+from servicenow_mcp.tools.catalog_tools import OrderCatalogItemParams, order_catalog_item
+
+params = OrderCatalogItemParams(
+    item="774906834fbb4200086eeed18110c737",  # Developer Laptop (Mac) sys_id
+    quantity="1",
+    requested_for="John Doe"
+)
+result = order_catalog_item(config, auth_manager, params)
+```
+
 ## Resources
 
 The following resources are available for accessing the ServiceNow Service Catalog:
@@ -194,6 +215,9 @@ To use the ServiceNow Service Catalog with Claude Desktop:
 - "Can you move the 'Virtual Machine' catalog item to the 'Cloud Services' category?"
 - "Can you create a subcategory called 'Monitors' under the 'IT Equipment' category?"
 - "Can you reorganize our catalog by moving all software items to the 'Software' category?"
+- "Can you order a Developer Laptop (Mac) for John Doe?"
+- "Can you order 2 iPad minis for the marketing team?"
+- "Can you place an order for a Standard Laptop with quantity 1?"
 
 ## Example Scripts
 

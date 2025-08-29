@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Tuple, Type
+from typing import Any, Callable, Dict, Tuple, Type, Optional
 
 # Import all necessary tool implementation functions and params models
 # (This list needs to be kept complete and up-to-date)
@@ -19,6 +19,7 @@ from servicenow_mcp.tools.catalog_tools import (
     ListCatalogItemsParams,
     MoveCatalogItemsParams,
     UpdateCatalogCategoryParams,
+    OrderCatalogItemParams,
 )
 from servicenow_mcp.tools.catalog_tools import (
     create_catalog_category as create_catalog_category_tool,
@@ -37,6 +38,9 @@ from servicenow_mcp.tools.catalog_tools import (
 )
 from servicenow_mcp.tools.catalog_tools import (
     update_catalog_category as update_catalog_category_tool,
+)
+from servicenow_mcp.tools.catalog_tools import (
+    order_catalog_item as order_catalog_item_tool,
 )
 from servicenow_mcp.tools.catalog_variables import (
     CreateCatalogItemVariableParams,
@@ -361,14 +365,18 @@ from servicenow_mcp.tools.record_tools import (
 )
 from servicenow_mcp.tools.request_tools import (
     CreateItemRequestParams,
-    CreateRequestParams,
     ListItemRequestsParams,
 )
 from servicenow_mcp.tools.request_tools import (
     create_item_request as create_item_request_tool,
-    create_request as create_request_tool,
     list_item_requests as list_item_requests_tool,
 )
+
+from servicenow_mcp.auth.auth_manager import AuthManager
+from servicenow_mcp.utils.config import ServerConfig
+import requests
+import logging
+logger = logging.getLogger(__name__)
 
 # Define a type alias for the Pydantic models or dataclasses used for params
 ParamsModel = Type[Any]  # Use Type[Any] for broader compatibility initially
@@ -509,6 +517,13 @@ def get_tool_definitions(
             UpdateCatalogItemVariableParams,
             Dict[str, Any],  # Expects dict
             "Update a catalog item variable",
+            "dict",  # Tool returns Pydantic model
+        ),
+        "order_catalog_item": (
+            order_catalog_item_tool,
+            OrderCatalogItemParams,
+            Dict[str, Any],  # Expects dict
+            "Order a catalog item",
             "dict",  # Tool returns Pydantic model
         ),
         # Change Management Tools
@@ -1050,13 +1065,6 @@ def get_tool_definitions(
             CreateItemRequestParams,
             str,
             "Create a new item request in ServiceNow. This is used to create a request for a specific item. You can link multiple item requests to a single request object.",
-            "str",
-        ),
-        "create_request": (
-            create_request_tool,
-            CreateRequestParams,
-            str,
-            "Create a new request object in ServiceNow.",
             "str",
         ),
         "list_item_requests": (

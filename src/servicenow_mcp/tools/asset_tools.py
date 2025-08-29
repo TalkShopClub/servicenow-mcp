@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from servicenow_mcp.auth.auth_manager import AuthManager
 from servicenow_mcp.utils.config import ServerConfig
+from servicenow_mcp.utils.resolvers import resolve_user_id, resolve_asset_id
 
 logger = logging.getLogger(__name__)
 
@@ -70,11 +71,9 @@ class GetAssetParams(BaseModel):
 class ListAssetsParams(BaseModel):
     """Parameters for listing assets."""
 
-    limit: int = Field(10, description="Maximum number of assets to return")
+    limit: int = Field(100, description="Maximum number of assets to return")
     offset: int = Field(0, description="Offset for pagination")
-    assigned_to: Optional[str] = Field(None, description="Filter by assigned user (sys_id of user)")
-    state: Optional[str] = Field(None, description="Filter by asset state")
-    category: Optional[str] = Field(None, description="Filter by category")
+    assigned_to: Optional[List[str]] = Field(None, description="List of sys_ids or names of users that have been assigned an asset. ")
     location: Optional[str] = Field(None, description="Filter by location")
     name: Optional[str] = Field(None, description="Search for assets by display name using LIKE matching")
     query: Optional[str] = Field(
@@ -148,7 +147,7 @@ def list_hardware_assets(
     query_parts = []
     if params.assigned_to:
         # Resolve user if username is provided
-        user_id = _resolve_user_id(config, auth_manager, params.assigned_to)
+        user_id = resolve_user_id(config, auth_manager, params.assigned_to)
         if user_id:
             query_parts.append(f"assigned_to={user_id}")
         else:
@@ -220,7 +219,7 @@ def create_asset(
         data["serial_number"] = params.serial_number
     if params.assigned_to:
         # Resolve user if username is provided
-        user_id = _resolve_user_id(config, auth_manager, params.assigned_to)
+        user_id = resolve_user_id(config, auth_manager, params.assigned_to)
         if user_id:
             data["assigned_to"] = user_id
         else:
@@ -295,7 +294,7 @@ def update_asset(
         Response with the updated asset details.
     """
     # Resolve asset sys_id if asset tag is provided
-    asset_sys_id = _resolve_asset_id(config, auth_manager, params.asset_id)
+    asset_sys_id = resolve_asset_id(config, auth_manager, params.asset_id)
     if not asset_sys_id:
         return AssetResponse(
             success=False,
@@ -314,7 +313,7 @@ def update_asset(
         data["serial_number"] = params.serial_number
     if params.assigned_to:
         # Resolve user if username is provided
-        user_id = _resolve_user_id(config, auth_manager, params.assigned_to)
+        user_id = resolve_user_id(config, auth_manager, params.assigned_to)
         if user_id:
             data["assigned_to"] = user_id
         else:
@@ -452,24 +451,22 @@ def list_assets(
     query_parts = []
     if params.assigned_to:
         # Resolve user if username is provided
-        user_id = _resolve_user_id(config, auth_manager, params.assigned_to)
-        if user_id:
-            query_parts.append(f"assigned_to={user_id}")
-        else:
-            # Try direct match if it's already a sys_id
-            query_parts.append(f"assigned_to={params.assigned_to}")
-    if params.state:
-        query_parts.append(f"state={params.state}")
-    if params.category:
-        query_parts.append(f"category={params.category}")
+        user_ids = []
+        for i, user in enumerate(params.assigned_to):
+            user_id = resolve_user_id(config, auth_manager, user)
+            if user_id:
+                user_ids.append(user_id)
+        query_parts.append(f"assigned_toIN{','.join(user_ids)}")
+
     if params.location:
         query_parts.append(f"location={params.location}")
     if params.name:
         # Search by display name using LIKE matching
         query_parts.append(f"display_nameLIKE{params.name}")
     if params.query:
+        # Fallback to search by asset tag, display name, serial number, model or short description
         query_parts.append(
-            f"^asset_tagLIKE{params.query}^ORdisplay_nameLIKE{params.query}^ORserial_numberLIKE{params.query}^ORmodelLIKE{params.query}"
+            f"^asset_tagLIKE{params.query}^ORdisplay_nameLIKE{params.query}^ORserial_numberLIKE{params.query}^ORmodelLIKE{params.query}^ORshort_descriptionLIKE{params.query}"
         )
 
     if query_parts:
@@ -573,7 +570,7 @@ def delete_asset(
         Response with the result of the operation.
     """
     # Resolve asset sys_id if asset tag is provided
-    asset_sys_id = _resolve_asset_id(config, auth_manager, params.asset_id)
+    asset_sys_id = resolve_asset_id(config, auth_manager, params.asset_id)
     if not asset_sys_id:
         return AssetResponse(
             success=False,
@@ -622,7 +619,7 @@ def transfer_asset(
         Response with the result of the operation.
     """
     # Resolve asset sys_id if asset tag is provided
-    asset_sys_id = _resolve_asset_id(config, auth_manager, params.asset_id)
+    asset_sys_id = resolve_asset_id(config, auth_manager, params.asset_id)
     if not asset_sys_id:
         return AssetResponse(
             success=False,
@@ -630,7 +627,7 @@ def transfer_asset(
         )
 
     # Resolve new user
-    new_user_id = _resolve_user_id(config, auth_manager, params.new_assigned_to)
+    new_user_id = resolve_user_id(config, auth_manager, params.new_assigned_to)
     if not new_user_id:
         return AssetResponse(
             success=False,
@@ -679,96 +676,3 @@ def transfer_asset(
             message=f"Failed to transfer asset: {str(e)}",
         )
 
-
-def _resolve_user_id(
-    config: ServerConfig,
-    auth_manager: AuthManager,
-    user_identifier: str,
-) -> Optional[str]:
-    """
-    Resolve a user identifier (username, email, or sys_id) to a sys_id.
-
-    Args:
-        config: Server configuration.
-        auth_manager: Authentication manager.
-        user_identifier: User identifier (username, email, or sys_id).
-
-    Returns:
-        User sys_id if found, None otherwise.
-    """
-    # If it looks like a sys_id, return as is
-    if len(user_identifier) == 32 and all(c in "0123456789abcdef" for c in user_identifier):
-        return user_identifier
-
-    api_url = f"{config.api_url}/table/sys_user"
-    
-    # Try username first, then email
-    for field in ["user_name", "email"]:
-        query_params = {
-            "sysparm_query": f"{field}={user_identifier}",
-            "sysparm_limit": "1",
-        }
-
-        try:
-            response = requests.get(
-                api_url,
-                params=query_params,
-                headers=auth_manager.get_headers(),
-                timeout=config.timeout,
-            )
-            response.raise_for_status()
-
-            result = response.json().get("result", [])
-            if result:
-                return result[0].get("sys_id")
-
-        except requests.RequestException as e:
-            logger.error(f"Failed to resolve user ID for {field}={user_identifier}: {e}")
-            continue
-
-    return None
-
-
-def _resolve_asset_id(
-    config: ServerConfig,
-    auth_manager: AuthManager,
-    asset_identifier: str,
-) -> Optional[str]:
-    """
-    Resolve an asset identifier (asset_tag or sys_id) to a sys_id.
-
-    Args:
-        config: Server configuration.
-        auth_manager: Authentication manager.
-        asset_identifier: Asset identifier (asset_tag or sys_id).
-
-    Returns:
-        Asset sys_id if found, None otherwise.
-    """
-    # If it looks like a sys_id, return as is
-    if len(asset_identifier) == 32 and all(c in "0123456789abcdef" for c in asset_identifier):
-        return asset_identifier
-
-    api_url = f"{config.api_url}/table/alm_asset"
-    query_params = {
-        "sysparm_query": f"asset_tag={asset_identifier}",
-        "sysparm_limit": "1",
-    }
-
-    try:
-        response = requests.get(
-            api_url,
-            params=query_params,
-            headers=auth_manager.get_headers(),
-            timeout=config.timeout,
-        )
-        response.raise_for_status()
-
-        result = response.json().get("result", [])
-        if result:
-            return result[0].get("sys_id")
-
-    except requests.RequestException as e:
-        logger.error(f"Failed to resolve asset ID for asset_tag={asset_identifier}: {e}")
-
-    return None

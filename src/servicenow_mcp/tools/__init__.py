@@ -5,7 +5,6 @@ Tools module for the ServiceNow MCP server.
 # Import tools as they are implemented
 from servicenow_mcp.tools.request_tools import (
     create_item_request,
-    create_request,
     list_item_requests,
 )
 
@@ -29,6 +28,7 @@ from servicenow_mcp.tools.catalog_tools import (
     list_catalog_items,
     move_catalog_items,
     update_catalog_category,
+    order_catalog_item,
 )
 from servicenow_mcp.tools.catalog_variables import (
     create_catalog_item_variable,
@@ -155,6 +155,7 @@ __all__ = [
     "create_catalog_item_variable",
     "list_catalog_item_variables",
     "update_catalog_item_variable",
+    "order_catalog_item",
     
     # Change management tools
     "create_change_request",
@@ -251,7 +252,6 @@ __all__ = [
 
     # Request tools
     "create_item_request",
-    "create_request",
     "list_item_requests",
     
     # Future tools

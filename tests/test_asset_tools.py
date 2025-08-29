@@ -27,9 +27,8 @@ from servicenow_mcp.tools.asset_tools import (
     delete_asset,
     transfer_asset,
     search_assets_by_name,
-    _resolve_user_id,
-    _resolve_asset_id,
 )
+from servicenow_mcp.utils.resolvers import resolve_user_id, resolve_asset_id
 from servicenow_mcp.utils.config import ServerConfig
 
 

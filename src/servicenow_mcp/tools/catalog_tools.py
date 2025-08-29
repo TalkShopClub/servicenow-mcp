@@ -6,15 +6,23 @@ This module provides tools for querying and viewing the service catalog in Servi
 
 import logging
 from typing import Any, Dict, List, Optional
+import traceback
 
 import requests
 from pydantic import BaseModel, Field
 
 from servicenow_mcp.auth.auth_manager import AuthManager
-from servicenow_mcp.utils.config import ServerConfig
+from servicenow_mcp.utils.config import ServerConfig, get_default_configuration
+from servicenow_mcp.utils.resolvers import resolve_catalog_item_id, resolve_user_id, map_to_servicenow_variable_names
 
 logger = logging.getLogger(__name__)
 
+class OrderCatalogItemParams(BaseModel): 
+    """Parameters for ordering a service catalog item."""
+
+    item: str = Field(..., description="Name or sys_id of the catalog item to order. sys_id is preferred.") 
+    quantity: str = Field(..., description="Quantity of the catalog item to order")
+    requested_for: str = Field("", description="Name or sys_id of the person requesting the item. sys_id is preferred.")
 
 class ListCatalogItemsParams(BaseModel):
     """Parameters for listing service catalog items."""
@@ -77,6 +85,83 @@ class MoveCatalogItemsParams(BaseModel):
     
     item_ids: List[str] = Field(..., description="List of catalog item IDs to move")
     target_category_id: str = Field(..., description="Target category ID to move items to")
+
+def _get_default_configuration(item_identifier): 
+    catalog_item_sys_ids = {
+        "Developer Laptop (Mac)": "774906834fbb4200086eeed18110c737",
+        "iPad mini": "e8d5f2f29792cd1021983d1e6253af31", 
+        "iPad pro": "c3b9cbf29716cd1021983d1e6253afad",
+        "Sales Laptop": "e212a942c0a80165008313c59764eea1",
+        "Standard Laptop": "04b7e94b4f7b4200086eeed18110c7fd",
+        "Apple Watch": "4a17d6a3ff133100ba13ffffffffffe7",
+        "Apple MacBook Pro 15": "2ab7077237153000158bbfc8bcbe5da9",  # Note: Name is "Apple MacBook Pro 15"" in ServiceNow
+        "Development Laptop (PC)": "3cecd2350a0a0a6a013a3a35a5e41c07",
+        "Loaner Laptop": "10f110aec611227601fbe1841e7e417c"  # Note: sys_name is "Notebook Computer Loaner"
+    }
+
+def order_catalog_item(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: OrderCatalogItemParams,
+) -> CatalogResponse:
+    """
+    Order a service catalog item from ServiceNow.
+    """
+    
+    # Resolve the catalog item id
+    catalog_item_id = resolve_catalog_item_id(config, auth_manager, params.item)
+    if not catalog_item_id:
+        return CatalogResponse(
+            success=False,
+            message=f"Catalog item not found: {params.item}",
+        )
+    
+    # Resolve the user id
+    user_id = resolve_user_id(config, auth_manager, params.requested_for)
+    if not user_id:
+        return CatalogResponse(
+            success=False,
+            message=f"User not found: {params.requested_for}",
+        )
+    
+    # Get the default configuration for the catalog item
+    default_configuration = get_default_configuration(catalog_item_id)
+
+    # Prepare order data 
+    order_data = {
+        "sysparm_quantity": params.quantity,
+        "sysparm_requested_for": user_id,
+        "variables": map_to_servicenow_variable_names(
+            config.instance_url, 
+            catalog_item_id, 
+            default_configuration,
+            auth_manager.get_headers(),
+            (auth_manager.config.basic.username, auth_manager.config.basic.password)
+        ),
+    }
+
+    # Make API call 
+    try:     
+        url = f"{config.instance_url}api/sn_sc/servicecatalog/items/{catalog_item_id}/order_now"
+        session = requests.Session()
+        session.auth = (auth_manager.config.basic.username, auth_manager.config.basic.password)
+        session.headers.update(auth_manager.get_headers())
+        response = session.post(url, json=order_data, timeout=config.timeout)
+        response.raise_for_status()
+        result = response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error ordering catalog item: {str(e)}")
+        logger.error(traceback.format_exc())
+        return CatalogResponse(
+            success=False,
+            message=f"Error ordering catalog item: {str(e)}"
+        )
+    
+    return CatalogResponse(
+        success=True,
+        message=f"Catalog item ordered successfully",
+        data=result,
+    )
 
 
 def list_catalog_items(
@@ -235,7 +320,7 @@ def get_catalog_item(
             data=formatted_item,
         )
     
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException as e: 
         logger.error(f"Error getting catalog item: {str(e)}")
         return CatalogResponse(
             success=False,

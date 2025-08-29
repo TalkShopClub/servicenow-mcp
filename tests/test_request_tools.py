@@ -11,11 +11,9 @@ import os
 
 from servicenow_mcp.auth.auth_manager import AuthManager
 from servicenow_mcp.tools.request_tools import (
-    CreateRequestParams,
     CreateItemRequestParams,
     ListItemRequestsParams,
     RequestAndCatalogItemResponse,
-    create_request,
     create_item_request,
     list_item_requests,
     _resolve_user_id,
@@ -39,91 +37,6 @@ class TestRequestTools(unittest.TestCase):
         )
         self.auth_manager = Mock(spec=AuthManager)
         self.auth_manager.get_headers.return_value = {"Authorization": "Basic test"}
-
-    @patch("servicenow_mcp.tools.request_tools._resolve_user_id")
-    @patch("servicenow_mcp.tools.request_tools.requests.post")
-    def test_create_request_success(self, mock_post, mock_resolve_user):
-        """Test successful request creation."""
-        # Mock user resolution
-        mock_resolve_user.return_value = "resolved_user_id"
-
-        # Mock response
-        mock_response = Mock()
-        mock_response.raise_for_status.return_value = None
-        mock_response.json.return_value = {
-            "result": {
-                "sys_id": "test_request_id",
-                "number": "REQ0001001",
-                "state": "1",
-                "requested_for": "resolved_user_id"
-            }
-        }
-        mock_post.return_value = mock_response
-
-        # Test parameters
-        params = CreateRequestParams(
-            requested_for="admin",
-            state="1",
-            approval="not requested"
-        )
-
-        # Call function
-        result = create_request(self.config, self.auth_manager, params)
-
-        # Assertions
-        self.assertTrue(result.success)
-        self.assertEqual(result.message, "Request created successfully")
-        self.assertEqual(result.sys_id, "test_request_id")
-
-        # Verify API call
-        mock_post.assert_called_once()
-        call_args = mock_post.call_args
-        self.assertEqual(call_args[0][0], f"{self.config.api_url}/table/sc_request")
-        
-        expected_data = {
-            "requested_for": "resolved_user_id",
-            "state": "1",
-            "approval": "not requested",
-        }
-        self.assertEqual(call_args[1]["json"], expected_data)
-
-    @patch("servicenow_mcp.tools.request_tools._resolve_user_id")
-    @patch("servicenow_mcp.tools.request_tools.requests.post")
-    def test_create_request_user_not_found(self, mock_post, mock_resolve_user):
-        """Test request creation when requested user is not found."""
-        mock_resolve_user.return_value = None
-
-        params = CreateRequestParams(
-            requested_for="invalid_user",
-            state="1",
-            approval="not requested"
-        )
-
-        result = create_request(self.config, self.auth_manager, params)
-
-        self.assertFalse(result.success)
-        self.assertIn("Could not resolve user", result.message)
-        mock_post.assert_not_called()
-
-    @patch("servicenow_mcp.tools.request_tools._resolve_user_id")
-    @patch("servicenow_mcp.tools.request_tools.requests.post")
-    def test_create_request_api_error(self, mock_post, mock_resolve_user):
-        """Test request creation with API error."""
-        # Mock successful user resolution
-        mock_resolve_user.return_value = "resolved_user_id"
-        
-        # Mock API error
-        mock_post.side_effect = requests.RequestException("API Error")
-
-        params = CreateRequestParams(
-            requested_for="admin",
-            state="1"
-        )
-
-        result = create_request(self.config, self.auth_manager, params)
-
-        self.assertFalse(result.success)
-        self.assertIn("Failed to create request", result.message)
 
     @patch("servicenow_mcp.tools.request_tools._resolve_user_id")
     @patch("servicenow_mcp.tools.request_tools._resolve_catalog_item_id")
@@ -308,18 +221,6 @@ class TestRequestTools(unittest.TestCase):
         call_args = mock_get.call_args
         self.assertEqual(call_args[0][0], f"{self.config.api_url}/table/sc_req_item")
         self.assertEqual(call_args[1]["params"]["sysparm_limit"], "15")
-
-    def test_create_request_params_validation(self):
-        """Test CreateRequestParams validation."""
-        # Test valid parameters
-        params = CreateRequestParams(
-            requested_for="john.doe",
-            state="1",
-            approval="not requested"
-        )
-        self.assertEqual(params.requested_for, "john.doe")
-        self.assertEqual(params.state, "1")
-        self.assertEqual(params.approval, "not requested")
 
     def test_create_item_request_params_validation(self):
         """Test CreateItemRequestParams validation."""

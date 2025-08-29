@@ -17,6 +17,7 @@ Usage:
 import os
 import sys
 
+import requests
 from dotenv import load_dotenv
 
 # Add the project root to the Python path
@@ -27,9 +28,15 @@ from servicenow_mcp.tools.catalog_tools import (
     GetCatalogItemParams,
     ListCatalogCategoriesParams,
     ListCatalogItemsParams,
+    OrderCatalogItemParams,
     get_catalog_item,
     list_catalog_categories,
     list_catalog_items,
+    order_catalog_item,
+)
+from servicenow_mcp.tools.request_tools import (
+    ListItemRequestsParams,
+    list_item_requests,
 )
 from servicenow_mcp.utils.config import AuthConfig, AuthType, BasicAuthConfig, ServerConfig
 
@@ -63,18 +70,22 @@ def main():
     # Create the auth manager
     auth_manager = AuthManager(config.auth)
 
-    # Test listing catalog categories
-    print("\n=== Testing List Catalog Categories ===")
-    category_id = test_list_catalog_categories(config, auth_manager)
+    # # Test listing catalog categories
+    # print("\n=== Testing List Catalog Categories ===")
+    # category_id = test_list_catalog_categories(config, auth_manager)
 
-    # Test listing catalog items
-    print("\n=== Testing List Catalog Items ===")
-    item_id = test_list_catalog_items(config, auth_manager, category_id)
+    # # Test listing catalog items
+    # print("\n=== Testing List Catalog Items ===")
+    # item_id = test_list_catalog_items(config, auth_manager, category_id)
 
-    # Test getting a specific catalog item
-    if item_id:
-        print("\n=== Testing Get Catalog Item ===")
-        test_get_catalog_item(config, auth_manager, item_id)
+    # # Test getting a specific catalog item
+    # if item_id:
+    #     print("\n=== Testing Get Catalog Item ===")
+    #     test_get_catalog_item(config, auth_manager, item_id)
+
+    # Test ordering catalog items
+    print("\n=== Testing Order Catalog Item ===")
+    test_order_catalog_item(config, auth_manager)
 
 
 def test_list_catalog_categories(config, auth_manager):
@@ -169,6 +180,96 @@ def test_get_catalog_item(config, auth_manager, item_id):
                 print()
     else:
         print(f"Error: {result.message}")
+
+
+def test_order_catalog_item(config, auth_manager):
+    """Test ordering catalog items."""
+    from time import sleep 
+
+    order_sys_ids = []
+    req_item_sys_ids = []
+    
+    try:
+        print("Testing catalog item ordering...")
+        
+        # Test 1: Order using catalog item name with requested_for as "Amber Willis"
+        print("\n--- Test 1: Order using item name ---")
+        params1 = OrderCatalogItemParams(
+            item="Developer Laptop (Mac)",  # Using item name
+            quantity="1",
+            requested_for="Amber Willis"
+        )
+        
+        result1 = order_catalog_item(config, auth_manager, params1)
+        
+        if result1.success:
+            order_sys_id1 = result1.data['result']['sys_id']
+            order_sys_ids.append(order_sys_id1)
+            print(f"✓ Successfully ordered item using name. Order ID: {order_sys_id1}")
+            # Check if the order is created
+
+            print('Waiting for 2 seconds to wait for DB to update')
+            sleep(2)
+
+            result1 = list_item_requests(config, auth_manager, ListItemRequestsParams(request_id=order_sys_id1)) 
+            req_item_sys_ids.append(result1['item_requests'][0]['sys_id'])
+            print('Found item request sys_id: ', result1['item_requests'][0]['sys_id'])
+            print("--------------------------------")
+        else:
+            print(f"✗ Failed to order item using name: {result1.message}")
+        
+        # Test 2: Order using catalog item sys_id with requested_for as sys_id
+        print("\n--- Test 2: Order using item sys_id ---")
+        params2 = OrderCatalogItemParams(
+            item="774906834fbb4200086eeed18110c737",  # Developer Laptop (Mac) sys_id
+            quantity="1",
+            requested_for="001a76dcc367a2107bd371edd4013149"  # sys_id for requested_for
+        )
+        
+        result2 = order_catalog_item(config, auth_manager, params2)
+        
+        if result2.success:
+            order_sys_id2 = result2.data['result']['sys_id']
+            order_sys_ids.append(order_sys_id2)
+            print(f"✓ Successfully ordered item using sys_id. Order ID: {order_sys_id2}")
+            # Check if the order is created
+            print('Waiting for 2 seconds to wait for DB to update')
+            sleep(2)
+
+            result2 = list_item_requests(config, auth_manager, ListItemRequestsParams(request_id=order_sys_id2)) 
+            req_item_sys_ids.append(result2['item_requests'][0]['sys_id'])
+            print('Found item request sys_id: ', result2['item_requests'][0]['sys_id'])
+            print("--------------------------------")
+        else:
+            print(f"✗ Failed to order item using sys_id: {result2.message}")
+            
+    except Exception as e:
+        print(f"✗ Error during ordering test: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+    
+    # Cleanup: Delete the created orders
+    if order_sys_ids:
+        print(f"\n--- Cleanup: Deleting {len(order_sys_ids)} test orders ---")
+        print(f"Order sys ids: {order_sys_ids}")
+        print(f"Req item sys ids: {req_item_sys_ids}")
+        cleanup_orders(config, auth_manager, order_sys_ids)
+
+
+def cleanup_orders(config: ServerConfig, auth_manager: AuthManager, order_sys_ids):
+    """Clean up test orders by deleting them."""
+    headers = auth_manager.get_headers()
+    headers["Accept"] = "application/json"
+    
+    for order_id in order_sys_ids:
+        try:
+            # Delete the order using the ServiceNow API
+            url = f"{config.instance_url}api/now/table/sc_request/{order_id}"
+            response = requests.delete(url, auth=(config.auth.basic.username, config.auth.basic.password), headers=headers)
+            response.raise_for_status()
+            print(f"✓ Deleted order: {order_id}")
+        except Exception as e:
+            print(f"✗ Failed to delete order {order_id}: {str(e)}")
 
 
 if __name__ == "__main__":

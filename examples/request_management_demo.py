@@ -12,7 +12,7 @@ Usage:
 Requirements:
     - ServiceNow instance with proper authentication configured
     - MCP_TOOL_PACKAGE environment variable set to 'full' or another package containing request tools
-    - Request management tools: create_item_request, create_request, list_item_requests
+    - Request management tools: create_item_request, list_item_requests
     - Direct API access for cleanup operations (uses basic auth to delete records)
 """
 
@@ -54,39 +54,6 @@ def load_config():
         },
         timeout=30
     )
-
-
-def demo_create_parent_request(mcp_server):
-    """Demonstrate creating a parent request object."""
-    print("\n=== Parent Request Creation Demo ===")
-    
-    # Create a parent request for office supplies
-    # Note: CreateRequestParams only supports: requested_for, state, approval
-    request_params = {
-        "requested_for": "admin",  # Using admin user which should exist
-        "state": "1",  # New/Requested
-        "approval": "not requested"  # Default approval status
-    }
-    
-    print(f"Creating parent request for user: {request_params['requested_for']}")
-    result = asyncio.run(mcp_server._call_tool_impl("create_request", request_params))
-    print(f"Result: {result[0].text}")
-    
-    # Extract request sys_id from the result for linking item requests
-    try:
-        # The result should contain the sys_id of the created request
-        result_text = result[0].text
-        # Look for sys_id in the response (typically a 32-character hex string)
-        import re
-        sys_id_match = re.search(r'[a-f0-9]{32}', result_text)
-        if sys_id_match:
-            request_sys_id = sys_id_match.group(0)
-            print(f"Created parent request with sys_id: {request_sys_id}")
-            return request_sys_id
-    except Exception as e:
-        print(f"Could not extract request sys_id: {e}")
-    
-    return None
 
 
 def demo_create_item_requests(mcp_server, parent_request_sys_id=None):
@@ -282,109 +249,6 @@ def demo_list_item_requests_advanced_filters(mcp_server):
     }
     result = asyncio.run(mcp_server._call_tool_impl("list_item_requests", list_params))
     print(f"Result: {result[0].text}")
-
-
-def demo_request_workflow_simulation(mcp_server):
-    """Demonstrate a complete request workflow simulation."""
-    print("\n=== Request Workflow Simulation Demo ===")
-    
-    print("Step 1: Creating parent request for new employee onboarding")
-    # Create parent request (using only supported parameters)
-    parent_params = {
-        "requested_for": "admin",
-        "state": "1",  # New/Requested
-        "approval": "not requested"
-    }
-    
-    parent_result = asyncio.run(mcp_server._call_tool_impl("create_request", parent_params))
-    print(f"Parent request created: {parent_result[0].text}")
-    
-    # Extract parent request sys_id
-    parent_request_sys_id = None
-    workflow_item_sys_ids = []
-    
-    try:
-        import re
-        sys_id_match = re.search(r'[a-f0-9]{32}', parent_result[0].text)
-        if sys_id_match:
-            parent_request_sys_id = sys_id_match.group(0)
-    except:
-        pass
-    
-    print(f"\nStep 2: Creating related item requests for the onboarding")
-    
-    # Apple Watch
-    watch_params = {
-        "cat_item": "Apple Watch",  # Matches actual catalog item
-        "short_description": "Apple Watch - Demo Workflow",
-        "requested_for": "admin",
-        "quantity": "1",
-        "state": "1",
-    }
-    
-    if parent_request_sys_id:
-        watch_params["request"] = parent_request_sys_id
-    
-    watch_result = asyncio.run(mcp_server._call_tool_impl("create_item_request", watch_params))
-    print(f"Apple Watch request: {watch_result[0].text}")
-    
-    # Extract sys_id from result
-    sys_id_match = re.search(r'[a-f0-9]{32}', watch_result[0].text)
-    if sys_id_match:
-        workflow_item_sys_ids.append(sys_id_match.group(0))
-    
-    # Apple iPad 3
-    ipad_params = {
-        "cat_item": "Apple iPad 3",  # Matches actual catalog item
-        "short_description": "Apple iPad 3 - Demo Workflow",
-        "requested_for": "admin",
-        "quantity": "1",
-        "state": "1",
-    }
-    
-    if parent_request_sys_id:
-        ipad_params["request"] = parent_request_sys_id
-    
-    ipad_result = asyncio.run(mcp_server._call_tool_impl("create_item_request", ipad_params))
-    print(f"Apple iPad 3 request: {ipad_result[0].text}")
-    
-    # Extract sys_id from result
-    sys_id_match = re.search(r'[a-f0-9]{32}', ipad_result[0].text)
-    if sys_id_match:
-        workflow_item_sys_ids.append(sys_id_match.group(0))
-    
-    # Apple iPhone 13
-    iphone_params = {
-        "cat_item": "Apple iPhone 13",  # Matches actual catalog item
-        "short_description": "Apple iPhone 13 - Demo Workflow",
-        "requested_for": "admin",
-        "quantity": "1",
-        "state": "1",
-    }
-    
-    if parent_request_sys_id:
-        iphone_params["request"] = parent_request_sys_id
-    
-    iphone_result = asyncio.run(mcp_server._call_tool_impl("create_item_request", iphone_params))
-    print(f"Apple iPhone 13 request: {iphone_result[0].text}")
-    
-    # Extract sys_id from result
-    sys_id_match = re.search(r'[a-f0-9]{32}', iphone_result[0].text)
-    if sys_id_match:
-        workflow_item_sys_ids.append(sys_id_match.group(0))
-    
-    print(f"\nStep 3: Viewing all item requests for the onboarding workflow")
-    # List all demo item requests (since we can't filter by parent request directly)
-    list_params = {
-        "limit": 15,
-        "short_description": "Demo"
-    }
-    workflow_result = asyncio.run(mcp_server._call_tool_impl("list_item_requests", list_params))
-    print(f"Workflow item requests: {workflow_result[0].text}")
-    print("Note: Filtering by parent request sys_id is not supported in ListItemRequestsParams")
-    
-    print(f"Captured {len(workflow_item_sys_ids)} workflow item request sys_ids for cleanup")
-    return parent_request_sys_id, workflow_item_sys_ids
 
 
 def demo_cleanup_item_requests(mcp_server, item_request_sys_ids):
