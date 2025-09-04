@@ -293,3 +293,12 @@ full:
   # Request Management 
   - create_item_request
   - list_item_requests
+  # Expense Management
+  - list_expense_lines
+  - delete_expense_line
+  # Report Management
+  - get_report
+  - get_report_ids_from_portal_widgets
+  - get_canvas
+  - get_portal_widgets
+  - get_dashboard_tab

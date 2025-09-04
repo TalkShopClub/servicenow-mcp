@@ -372,6 +372,29 @@ from servicenow_mcp.tools.request_tools import (
     list_item_requests as list_item_requests_tool,
 )
 
+from servicenow_mcp.tools.expense_tools import (
+    ListExpenseLineParams,
+    DeleteExpenseLineParams,
+)
+from servicenow_mcp.tools.expense_tools import (
+    list_expense_lines as list_expense_lines_tool,
+    delete_expense_line as delete_expense_line_tool,
+)
+from servicenow_mcp.tools.report_tools import (
+    GetReportParams,
+    GetReportIdsFromPortalWidgetsParams,
+    GetCanvasParams,
+    GetPortalWidgetsParams,
+    GetDashboardTabParams,
+)
+from servicenow_mcp.tools.report_tools import (
+    get_report as get_report_tool,
+    get_report_ids_from_portal_widgets as get_report_ids_from_portal_widgets_tool,
+    get_canvas as get_canvas_tool,
+    get_portal_widgets as get_portal_widgets_tool,
+    get_dashboard_tab as get_dashboard_tab_tool,
+)
+
 from servicenow_mcp.auth.auth_manager import AuthManager
 from servicenow_mcp.utils.config import ServerConfig
 import requests
@@ -1072,6 +1095,59 @@ def get_tool_definitions(
             ListItemRequestsParams,
             Dict[str, Any],
             "List item requests from ServiceNow",
+            "raw_dict",
+        ),
+
+        # Expense Management Tools
+        "list_expense_lines": (
+            list_expense_lines_tool,
+            ListExpenseLineParams,
+            Dict[str, Any],
+            "List expense lines from ServiceNow. These hold the details of all the expenses that are made.", 
+            "raw_dict",
+        ),
+        "delete_expense_line": (
+            delete_expense_line_tool,
+            DeleteExpenseLineParams,
+            dict,
+            "Delete an expense line from ServiceNow",
+            "dict",
+        ),
+
+        # Report Management Tools
+        "get_report": (
+            get_report_tool,
+            GetReportParams,
+            Dict[str, Any],
+            "Get a specific report from ServiceNow. All the ServiceNow charts are represented as reports.",
+            "raw_dict",
+        ),
+        "get_report_ids_from_portal_widgets": (
+            get_report_ids_from_portal_widgets_tool,
+            GetReportIdsFromPortalWidgetsParams,
+            Dict[str, Any],
+            "Get all the report ids linked to the portal widgets on a dashboard.",
+            "raw_dict",
+        ), 
+        "get_canvas": (
+            get_canvas_tool,
+            GetCanvasParams,
+            Dict[str, Any],
+            "Get the canvas page id linked to the dashboard tab.",
+            "raw_dict",
+        ),
+        "get_portal_widgets": (
+            get_portal_widgets_tool,
+            GetPortalWidgetsParams,
+            Dict[str, Any],
+            "Get all the portal widget ids linked to the canvas page.",
+            "raw_dict",
+        ),
+        "get_dashboard_tab": (
+            get_dashboard_tab_tool,
+            GetDashboardTabParams,
+            Dict[str, Any],
+            "Get the dashboard tab id linked to the dashboard.",
             "raw_dict",
         ),
     }

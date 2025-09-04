@@ -130,6 +130,18 @@ from servicenow_mcp.tools.project_tools import (
 from servicenow_mcp.tools.record_tools import (
     create_problem,
 )
+from servicenow_mcp.tools.expense_tools import (
+    list_expense_lines,
+    delete_expense_line,
+)
+
+from servicenow_mcp.tools.report_tools import (
+    get_report,
+    get_report_ids_from_portal_widgets,
+    get_canvas,
+    get_portal_widgets,
+    get_dashboard_tab,
+)
 # from servicenow_mcp.tools.request_tools import create_request, update_request
 
 __all__ = [
@@ -253,9 +265,15 @@ __all__ = [
     # Request tools
     "create_item_request",
     "list_item_requests",
+
+    # Expense tools
+    "list_expense_lines",
+    "delete_expense_line",
     
-    # Future tools
-    # "update_problem",
-    # "create_request",
-    # "update_request",
+    # Report tools
+    "get_report",
+    "get_report_ids_from_portal_widgets",
+    "get_canvas",
+    "get_portal_widgets",
+    "get_dashboard_tab",
 ] 
