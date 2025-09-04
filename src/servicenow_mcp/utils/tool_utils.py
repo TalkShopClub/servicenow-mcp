@@ -386,6 +386,7 @@ from servicenow_mcp.tools.report_tools import (
     GetCanvasParams,
     GetPortalWidgetsParams,
     GetDashboardTabParams,
+    GetAnyTableParams,
 )
 from servicenow_mcp.tools.report_tools import (
     get_report as get_report_tool,
@@ -393,6 +394,7 @@ from servicenow_mcp.tools.report_tools import (
     get_canvas as get_canvas_tool,
     get_portal_widgets as get_portal_widgets_tool,
     get_dashboard_tab as get_dashboard_tab_tool,
+    search_any_table as search_any_table_tool,
 )
 
 from servicenow_mcp.auth.auth_manager import AuthManager
@@ -1148,6 +1150,13 @@ def get_tool_definitions(
             GetDashboardTabParams,
             Dict[str, Any],
             "Get the dashboard tab id linked to the dashboard.",
+            "raw_dict",
+        ),
+        "search_any_table": (
+            search_any_table_tool,
+            GetAnyTableParams,
+            Dict[str, Any],
+            "Search any ServiceNow table.",
             "raw_dict",
         ),
     }

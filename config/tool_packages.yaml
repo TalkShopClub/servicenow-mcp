@@ -302,3 +302,4 @@ full:
   - get_canvas
   - get_portal_widgets
   - get_dashboard_tab
+  - search_any_table

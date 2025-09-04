@@ -141,6 +141,7 @@ from servicenow_mcp.tools.report_tools import (
     get_canvas,
     get_portal_widgets,
     get_dashboard_tab,
+    search_any_table,
 )
 # from servicenow_mcp.tools.request_tools import create_request, update_request
 
@@ -276,4 +277,5 @@ __all__ = [
     "get_canvas",
     "get_portal_widgets",
     "get_dashboard_tab",
+    "search_any_table",
 ] 

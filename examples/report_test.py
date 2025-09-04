@@ -29,11 +29,13 @@ from servicenow_mcp.tools.report_tools import (
     GetCanvasParams,
     GetPortalWidgetsParams,
     GetReportIdsFromPortalWidgetsParams,
+    GetAnyTableParams,
     get_report,
     get_dashboard_tab,
     get_canvas,
     get_portal_widgets,
     get_report_ids_from_portal_widgets,
+    search_any_table,
 )
 from servicenow_mcp.utils.config import AuthConfig, AuthType, BasicAuthConfig, ServerConfig
 
@@ -70,6 +72,10 @@ def main():
     # Main test: Cascade workflow to find "Incidents per week" report
     print("\n=== Finding 'Incidents per week' Report via Cascade Workflow ===")
     test_cascade_to_incidents_report(config, auth_manager)
+
+    # Test the search_any_table function
+    print("\n=== Testing Search Any Table Function ===")
+    test_search_any_table(config, auth_manager)
 
 def test_cascade_to_incidents_report(config, auth_manager):
     """
@@ -168,6 +174,53 @@ def test_cascade_to_incidents_report(config, auth_manager):
         print(f"❌ FAILURE: Could not find '{target_chart_title}' report")
         print(f"   Searched through {len(report_ids)} reports from the dashboard")
         print(f"   Dashboard path was successful up to report ID retrieval")
+        return None
+
+def test_search_any_table(config, auth_manager):
+    """
+    Test the search_any_table function with asmt_assessment_instance table.
+    """
+    print("Testing search_any_table function...")
+    print("Table: asmt_assessment_instance")
+    print("Filter: ^sys_created_on<javascript:gs.dateGenerate('2025-07-15','00:00:00')^metric_type.evaluation_method!=rating^EQ")
+    print("Fields: assessment_group")
+    print("-" * 60)
+    
+    # Create parameters for the search
+    search_params = GetAnyTableParams(
+        table="asmt_assessment_instance",
+        fields=["assessment_group"],
+        filters="sys_created_on<javascript:gs.dateGenerate('2025-07-15','00:00:00')^metric_type.evaluation_method!=rating^EQ",
+        limit=10
+    )
+    
+    # Call the search function
+    result = search_any_table(config, auth_manager, search_params)
+    
+    # Display results
+    if result.success:
+        records = result.data
+        print(f"✓ Search successful!")
+        print(f"   Found {len(records)} records")
+        print(f"   Message: {result.message}")
+        
+        if records:
+            print("\n📋 Sample Records:")
+            for i, record in enumerate(records[:5], 1):  # Show first 5 records
+                assessment_group = record.get('assessment_group', 'N/A')
+                sys_id = record.get('sys_id', 'N/A')
+                print(f"   Record {i}:")
+                print(f"      Sys ID: {sys_id}")
+                print(f"      Assessment Group: {assessment_group}")
+            
+            if len(records) > 5:
+                print(f"   ... and {len(records) - 5} more records")
+        else:
+            print("   No records found matching the criteria")
+            
+        return records
+    else:
+        print(f"✗ Search failed: {result.message}")
         return None
 
 def test_get_report(config, auth_manager):

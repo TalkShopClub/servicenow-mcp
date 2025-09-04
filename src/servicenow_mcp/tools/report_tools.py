@@ -47,7 +47,14 @@ class GetPortalWidgetsParams(BaseModel):
 class GetReportIdsFromPortalWidgetsParams(BaseModel): 
     """Parameters for getting all the report ids linked to the portal widgets."""
     portal_widget_ids: List[str] = Field(..., description="Portal widget IDs to get the report ids for")
-    
+
+class GetAnyTableParams(BaseModel): 
+    """Parameters for getting records from any ServiceNow table"""
+
+    table: str = Field(..., description="Table to get the records from")
+    fields: Optional[List[str]] = Field(None, description="Fields to get from the table")
+    filters: Optional[str] = Field(None, description="Filters to apply to the records. ^ indicates AND operation. ^OR indicates OR operation. LIKE is used for partial string matching. This must be a string.")
+    limit: Optional[int] = Field(None, description="Limit the number of records to return")
 
 def get_report(
     config: ServerConfig, 
@@ -276,3 +283,44 @@ def get_report_ids_from_portal_widgets(
             "message": f"Failed to get report ids from portal widgets: {str(e)}",
         }
         
+def search_any_table(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: GetAnyTableParams,
+) -> BaseResponse:
+    """
+    Search any ServiceNow table.
+    """
+    
+    api_url = f"{config.api_url}/table/{params.table}"
+    query_params = {}
+    if params.fields:
+        query_params["sysparm_fields"] = ",".join(params.fields)
+    if params.filters:
+        query_params["sysparm_query"] = params.filters
+    if params.limit:
+        query_params["sysparm_limit"] = str(params.limit)
+        
+    try: 
+        response = requests.get(
+            api_url,
+            params=query_params,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+            auth=(auth_manager.config.basic.username, auth_manager.config.basic.password)
+        ) 
+        response.raise_for_status() 
+        result = response.json().get("result", []) 
+        return BaseResponse(
+            success=True,
+            message=f"Found {len(result)} records",
+            data=result,
+        )
+    
+    except requests.RequestException as e:
+        logger.error(f"Failed to search any table: {e}")
+        return BaseResponse(
+            success=False,
+            message=f"Failed to search any table: {str(e)}",
+            data=None,
+        )
