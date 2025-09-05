@@ -174,7 +174,7 @@ def map_to_servicenow_variable_names(url, catalog_item_sys_id: str, requested_co
             Dict mapping ServiceNow variable names to values
         """
         try:
-            url = f"{url}api/now/table/item_option_new"
+            url = f"{url}/api/now/table/item_option_new"
             # Get all variables for this catalog item
             variables_result = requests.get(
                 url,
