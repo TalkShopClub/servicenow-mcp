@@ -346,6 +346,7 @@ from servicenow_mcp.tools.asset_tools import (
     TransferAssetParams,
     SearchAssetsByNameParams,
     ListHardwareAssetsParams,
+    CreateHardwareAssetParams,
 )
 from servicenow_mcp.tools.asset_tools import (
     create_asset as create_asset_tool,
@@ -356,6 +357,8 @@ from servicenow_mcp.tools.asset_tools import (
     transfer_asset as transfer_asset_tool,
     search_assets_by_name as search_assets_by_name_tool,
     list_hardware_assets as list_hardware_assets_tool,
+    create_hardware_asset as create_hardware_asset_tool,
+
 )
 from servicenow_mcp.tools.record_tools import (
     CreateProblemParams,
@@ -1083,6 +1086,13 @@ def get_tool_definitions(
             Dict[str, Any],  # Expects dict
             "List hardware assets from ServiceNow",
             "raw_dict",
+        ),
+        "create_hardware_asset": (
+            create_hardware_asset_tool,
+            CreateHardwareAssetParams,
+            Dict[str,Any],
+            "Create a new hardware asset in ServiceNow",
+            "str",
         ),
         # Request Management Tools
         "create_item_request": (

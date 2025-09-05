@@ -5,7 +5,7 @@ This module provides tools for managing users and groups in ServiceNow.
 """
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import requests
 from pydantic import BaseModel, Field
@@ -32,6 +32,7 @@ class CreateUserParams(BaseModel):
     location: Optional[str] = Field(None, description="Location of the user")
     password: Optional[str] = Field(None, description="Password for the user account")
     active: Optional[bool] = Field(True, description="Whether the user account is active")
+    fields: Optional[Dict[str, str]] = Field(None, description="Dictionary of other field names and corresponding values to set for the POST request. Example: {'priority': '1'}")
 
 
 class UpdateUserParams(BaseModel):
@@ -192,6 +193,9 @@ def create_user(
         data["location"] = params.location
     if params.password:
         data["user_password"] = params.password
+    if params.fields:
+        for field, value in params.fields.items():
+            data[field] = value
 
     # Make request
     try:
@@ -199,6 +203,7 @@ def create_user(
             api_url,
             json=data,
             headers=auth_manager.get_headers(),
+            auth=(auth_manager.config.basic.username, auth_manager.config.basic.password),
             timeout=config.timeout,
         )
         response.raise_for_status()
@@ -211,7 +216,7 @@ def create_user(
 
         return UserResponse(
             success=True,
-            message="User created successfully",
+            message="User created successfully. The sys_id of the user is: " + result.get("sys_id"),
             user_id=result.get("sys_id"),
             user_name=result.get("user_name"),
         )

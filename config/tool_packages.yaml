@@ -290,6 +290,7 @@ full:
   - transfer_asset
   - search_assets_by_name
   - list_hardware_assets
+  - create_hardware_asset
   # Request Management 
   - create_item_request
   - list_item_requests

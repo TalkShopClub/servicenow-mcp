@@ -6,7 +6,7 @@ creating, updating, deleting, and transferring assets between users.
 """
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import requests
 from pydantic import BaseModel, Field
@@ -127,6 +127,15 @@ class ListHardwareAssetsParams(BaseModel):
         description="Search term that matches against asset tag, display name, serial number, or model",
     )
 
+class CreateHardwareAssetParams(BaseModel):
+    """Parameters for creating a hardware asset."""
+    
+    model: str = Field(..., description="Model of the hardware asset")
+    model_category: str = Field(..., description="Model category of the hardware asset")
+    serial_number: str = Field(..., description="Serial number of the hardware asset")
+    vendor: str = Field(..., description="Vendor of the hardware asset")
+    fields: Optional[Dict[str, str]] = Field(None, description="Dictionary of other field names and corresponding values to set for the hardware asset. Example: {'priority': '1'}")
+
 def list_hardware_assets(
     config: ServerConfig,
     auth_manager: AuthManager,
@@ -188,6 +197,55 @@ def list_hardware_assets(
             "success": False,
             "message": f"Failed to list hardware assets: {str(e)}",
         }
+    
+def create_hardware_asset(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: CreateHardwareAssetParams,
+) -> AssetResponse:
+    """
+    Create a new hardware asset in ServiceNow.
+    """
+    api_url = f"{config.api_url}/table/alm_hardware"
+
+    # Build request data
+    data = {
+        "model": params.model,
+        "model_category": params.model_category,
+        "serial_number": params.serial_number,
+        "vendor": params.vendor,
+    }
+
+    if params.fields:
+        for field, value in params.fields.items():
+            data[field] = value
+
+    # Make request
+    try:
+        response = requests.post(
+            api_url,
+            json=data,
+            headers=auth_manager.get_headers(),
+            auth=(auth_manager.config.basic.username, auth_manager.config.basic.password),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+        
+        result = response.json().get("result", {})
+        
+        return AssetResponse(
+            success=True,
+            message="Hardware asset created successfully. The sys_id of the asset is: " + result.get("sys_id"),
+            asset_id=result.get("sys_id"),
+            asset_tag=result.get("asset_tag"),
+        ) 
+    except requests.RequestException as e:
+        logger.error(f"Failed to create hardware asset: {e}")
+        return AssetResponse(
+            success=False,
+            message=f"Failed to create hardware asset: {str(e)}",
+        )
+        
 
 def create_asset(
     config: ServerConfig,

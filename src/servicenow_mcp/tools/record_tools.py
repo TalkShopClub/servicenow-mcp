@@ -5,7 +5,7 @@ This module provides tools for creating and managing problems in ServiceNow.
 """
 
 import logging
-from typing import Optional
+from typing import Optional, Dict
 
 import requests
 from pydantic import BaseModel, Field
@@ -23,6 +23,7 @@ class CreateProblemParams(BaseModel):
     urgency: Optional[str] = Field("3", description="Urgency level (1=High, 2=Medium, 3=Low)")
     impact: Optional[str] = Field("3", description="Impact level (1=High, 2=Medium, 3=Low)")
     assigned_to: Optional[str] = Field(None, description="User assigned to the problem (user sys_id or username)")
+    fields: Optional[Dict[str, str]] = Field(None, description="Dictionary of other field names and corresponding values to set for the POST request. Example: {'priority': '1'}")
 
 
 class ProblemResponse(BaseModel):
@@ -69,6 +70,10 @@ def create_problem(
                 success=False,
                 message=f"Could not resolve user: {params.assigned_to}",
             )
+        
+    if params.fields:
+        for field, value in params.fields.items():
+            data[field] = value
 
     # Make request
     try:
@@ -76,6 +81,7 @@ def create_problem(
             api_url,
             json=data,
             headers=auth_manager.get_headers(),
+            auth=(auth_manager.config.basic.username, auth_manager.config.basic.password),
             timeout=config.timeout,
         )
         response.raise_for_status()
@@ -84,7 +90,7 @@ def create_problem(
 
         return ProblemResponse(
             success=True,
-            message="Problem created successfully",
+            message="Problem created successfully. The sys_id of the problem is: " + result.get("sys_id"),
             problem_id=result.get("sys_id"),
             problem_number=result.get("number"),
         )

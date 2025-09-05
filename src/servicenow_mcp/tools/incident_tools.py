@@ -5,13 +5,14 @@ This module provides tools for managing incidents in ServiceNow.
 """
 
 import logging
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import requests
 from pydantic import BaseModel, Field
 
 from servicenow_mcp.auth.auth_manager import AuthManager
 from servicenow_mcp.utils.config import ServerConfig
+from servicenow_mcp.utils.resolvers import resolve_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ class CreateIncidentParams(BaseModel):
     urgency: Optional[str] = Field(None, description="Urgency of the incident")
     assigned_to: Optional[str] = Field(None, description="User assigned to the incident")
     assignment_group: Optional[str] = Field(None, description="Group assigned to the incident")
+    fields: Optional[Dict[str, str]] = Field(None, description="Dictionary of other field names and corresponding values to set for the POST request. Example: {'priority': '1'}")
 
 
 class UpdateIncidentParams(BaseModel):
@@ -74,7 +76,8 @@ class ListIncidentsParams(BaseModel):
     state: Optional[str] = Field(None, description="Filter by incident state")
     assigned_to: Optional[str] = Field(None, description="Filter by assigned user")
     category: Optional[str] = Field(None, description="Filter by category")
-    query: Optional[str] = Field(None, description="Search query for incidents")
+    query: Optional[str] = Field(None, description="Filter by short description using LIKE matching. The query entered here will be checked against the short description of the incident. Contains information like incident hashtag and more")
+    number: Optional[str] = Field(None, description="Filter by incident number. This must not contain any special characters like #. This is not the same as incident hashtag")
 
 
 class GetIncidentByNumberParams(BaseModel):
@@ -130,9 +133,19 @@ def create_incident(
     if params.urgency:
         data["urgency"] = params.urgency
     if params.assigned_to:
-        data["assigned_to"] = params.assigned_to
+        user_id = resolve_user_id(config, auth_manager, params.assigned_to)
+        if user_id:
+            data["assigned_to"] = user_id
+        else:
+            return IncidentResponse(
+                success=False,
+                message=f"Could not resolve user: {params.assigned_to}",
+            )
     if params.assignment_group:
         data["assignment_group"] = params.assignment_group
+    if params.fields:
+        for field, value in params.fields.items():
+            data[field] = value
 
     # Make request
     try:
@@ -492,6 +505,8 @@ def list_incidents(
         filters.append(f"category={params.category}")
     if params.query:
         filters.append(f"short_descriptionLIKE{params.query}^ORdescriptionLIKE{params.query}")
+    if params.number:
+        filters.append(f"number={params.number}")
     
     if filters:
         query_params["sysparm_query"] = "^".join(filters)

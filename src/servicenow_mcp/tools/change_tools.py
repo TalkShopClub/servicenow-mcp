@@ -33,6 +33,7 @@ class CreateChangeRequestParams(BaseModel):
     assignment_group: Optional[str] = Field(None, description="Group assigned to the change")
     start_date: Optional[str] = Field(None, description="Planned start date (YYYY-MM-DD HH:MM:SS)")
     end_date: Optional[str] = Field(None, description="Planned end date (YYYY-MM-DD HH:MM:SS)")
+    fields: Optional[Dict[str, str]] = Field(None, description="Dictionary of other field names and corresponding values to set for the POST request. Example: {'priority': '1'}")
 
 
 class UpdateChangeRequestParams(BaseModel):
@@ -257,6 +258,9 @@ def create_change_request(
         data["start_date"] = validated_params.start_date
     if validated_params.end_date:
         data["end_date"] = validated_params.end_date
+    if validated_params.fields:
+        for field, value in validated_params.fields.items():
+            data[field] = value
     
     # Get the instance URL
     instance_url = _get_instance_url(auth_manager, server_config)

@@ -15,6 +15,7 @@ from servicenow_mcp.tools.asset_tools import (
     list_assets,
     delete_asset,
     list_hardware_assets,
+    create_hardware_asset,
 )
 
 from servicenow_mcp.tools.catalog_optimization import (
@@ -262,6 +263,7 @@ __all__ = [
     "list_assets",
     "delete_asset",
     "list_hardware_assets",
+    "create_hardware_asset",
 
     # Request tools
     "create_item_request",

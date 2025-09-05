@@ -19,7 +19,7 @@ class GetReportParams(BaseModel):
     """Parameters for getting a report. AND operation will be used if multiple parameters are provided."""
 
     report_id: Optional[str] = Field(None, description="Report ID to get the report for")
-    report_ids: Optional[List[str]] = Field(None, description="Filter by multiple report ids. If provided, report_id will be ignored")
+    report_ids: Optional[List[str]] = Field(None, description="Filter by multiple report ids. If provided, report_id will be ignored. OR operation will be used if multiple report ids are provided.")
     chart_title: Optional[str] = Field(None, description="Filter by title of the chart") 
     
 
