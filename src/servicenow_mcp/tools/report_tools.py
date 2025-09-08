@@ -52,9 +52,9 @@ class GetAnyTableParams(BaseModel):
     """Parameters for getting records from any ServiceNow table"""
 
     table: str = Field(..., description="Table to get the records from")
-    fields: Optional[List[str]] = Field(None, description="Fields to get from the table")
-    filters: Optional[str] = Field(None, description="Filters to apply to the records. ^ indicates AND operation. ^OR indicates OR operation. LIKE is used for partial string matching. This must be a string.")
-    limit: Optional[int] = Field(None, description="Limit the number of records to return")
+    fields: Optional[List[str]] = Field(None, description="Specific fields to get from the table. If not provided, all fields will be returned.")
+    filters: Optional[str] = Field(None, description="Filters to apply to the records. You must provide the field name and value of the field. You can have many field filters together. ^ indicates AND operation. ^OR indicates OR operation. LIKE is used for partial string matching. This must be a string.")
+    limit: int = Field(10, description="Limit the number of records to return")
 
 def get_report(
     config: ServerConfig, 
