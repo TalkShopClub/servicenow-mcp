@@ -340,22 +340,18 @@ from servicenow_mcp.tools.project_tools import (
 from servicenow_mcp.tools.asset_tools import (
     CreateAssetParams,
     UpdateAssetParams,
-    GetAssetParams,
-    ListAssetsParams,
+    GetAssetsParams,
     DeleteAssetParams,
     TransferAssetParams,
-    SearchAssetsByNameParams,
     ListHardwareAssetsParams,
     CreateHardwareAssetParams,
 )
 from servicenow_mcp.tools.asset_tools import (
     create_asset as create_asset_tool,
     update_asset as update_asset_tool,
-    get_asset as get_asset_tool,
-    list_assets as list_assets_tool,
+    get_assets as get_assets_tool,
     delete_asset as delete_asset_tool,
     transfer_asset as transfer_asset_tool,
-    search_assets_by_name as search_assets_by_name_tool,
     list_hardware_assets as list_hardware_assets_tool,
     create_hardware_asset as create_hardware_asset_tool,
 
@@ -1036,18 +1032,11 @@ def get_tool_definitions(
             "Update an existing asset in ServiceNow",
             "str",
         ),
-        "get_asset": (
-            get_asset_tool,
-            GetAssetParams,
+        "get_assets": (
+            get_assets_tool,
+            GetAssetsParams,
             Dict[str, Any],  # Expects dict
-            "Get a specific asset from ServiceNow",
-            "raw_dict",
-        ),
-        "list_assets": (
-            list_assets_tool,
-            ListAssetsParams,
-            Dict[str, Any],  # Expects dict
-            "List assets from ServiceNow",
+            "Get, list, or search for assets in ServiceNow. Supports single asset lookup by ID/tag/serial, filtering by user/location, and searching by name or general query.",
             "raw_dict",
         ),
         "delete_asset": (
@@ -1063,13 +1052,6 @@ def get_tool_definitions(
             str,
             "Transfer an asset to a different user in ServiceNow",
             "str",
-        ),
-        "search_assets_by_name": (
-            search_assets_by_name_tool,
-            SearchAssetsByNameParams,
-            Dict[str, Any],  # Expects dict
-            "Search for assets by display name using LIKE matching",
-            "raw_dict",
         ),
         # Problem Management Tools
         "create_problem": (

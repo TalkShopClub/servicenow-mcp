@@ -11,8 +11,7 @@ from servicenow_mcp.tools.request_tools import (
 from servicenow_mcp.tools.asset_tools import (
     create_asset,
     update_asset,
-    get_asset,
-    list_assets,
+    get_assets,
     delete_asset,
     list_hardware_assets,
     create_hardware_asset,
@@ -259,8 +258,7 @@ __all__ = [
     # Asset tools
     "create_asset",
     "update_asset",
-    "get_asset",
-    "list_assets",
+    "get_assets",
     "delete_asset",
     "list_hardware_assets",
     "create_hardware_asset",

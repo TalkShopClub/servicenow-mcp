@@ -6,7 +6,7 @@ creating, updating, deleting, and transferring assets between users.
 """
 
 import logging
-from typing import List, Optional, Dict
+from typing import Optional, Dict
 
 import requests
 from pydantic import BaseModel, Field
@@ -60,22 +60,25 @@ class UpdateAssetParams(BaseModel):
     comments: Optional[str] = Field(None, description="Comments about the asset")
 
 
-class GetAssetParams(BaseModel):
-    """Parameters for getting an asset."""
+class GetAssetsParams(BaseModel):
+    """Unified parameters for getting, listing, and searching assets."""
 
-    asset_id: Optional[str] = Field(None, description="Asset ID (sys_id)")
-    asset_tag: Optional[str] = Field(None, description="Asset tag")
-    serial_number: Optional[str] = Field(None, description="Serial number")
-
-
-class ListAssetsParams(BaseModel):
-    """Parameters for listing assets."""
-
+    # Pagination
     limit: int = Field(10, description="Maximum number of assets to return")
     offset: int = Field(0, description="Offset for pagination")
-    assigned_to: Optional[List[str]] = Field(None, description="List of sys_ids or names of users that have been assigned an asset. ")
+    
+    # Specific asset identification (for single asset retrieval)
+    asset_id: Optional[str] = Field(None, description="Asset ID (sys_id) - returns single asset if specified")
+    asset_tag: Optional[str] = Field(None, description="Asset tag - returns single asset if specified")
+    serial_number: Optional[str] = Field(None, description="Serial number - returns single asset if specified")
+    
+    # Filtering options
+    assigned_to: Optional[str] = Field(None, description="User sys_id or name that the asset is assigned to")
     location: Optional[str] = Field(None, description="Filter by location")
+    
+    # Search options
     name: Optional[str] = Field(None, description="Search for assets by display name using LIKE matching")
+    exact_match: bool = Field(False, description="Whether to perform exact match instead of LIKE matching for name search")
     query: Optional[str] = Field(
         None,
         description="Search term that matches against asset tag, display name, serial number, or model",
@@ -98,13 +101,6 @@ class TransferAssetParams(BaseModel):
     comments: Optional[str] = Field(None, description="Additional comments about the transfer")
 
 
-class SearchAssetsByNameParams(BaseModel):
-    """Parameters for searching assets by name."""
-
-    name: str = Field(..., description="Name or partial name to search for using LIKE matching")
-    limit: int = Field(10, description="Maximum number of assets to return")
-    offset: int = Field(0, description="Offset for pagination")
-    exact_match: bool = Field(False, description="Whether to perform exact match instead of LIKE matching")
 
 
 class AssetResponse(BaseModel):
@@ -429,74 +425,24 @@ def update_asset(
         )
 
 
-def get_asset(
+def get_assets(
     config: ServerConfig,
     auth_manager: AuthManager,
-    params: GetAssetParams,
+    params: GetAssetsParams,
 ) -> dict:
     """
-    Get an asset from ServiceNow.
+    Get, list, or search for assets in ServiceNow.
+    
+    This unified function combines the functionality of get_asset, list_assets, 
+    and search_assets_by_name into a single flexible function.
 
     Args:
         config: Server configuration.
         auth_manager: Authentication manager.
-        params: Parameters for getting the asset.
+        params: Parameters for getting, listing, or searching assets.
 
     Returns:
-        Dictionary containing asset details.
-    """
-    api_url = f"{config.api_url}/table/alm_asset"
-    query_params = {}
-
-    # Build query parameters
-    if params.asset_id:
-        query_params["sysparm_query"] = f"sys_id={params.asset_id}"
-    elif params.asset_tag:
-        query_params["sysparm_query"] = f"asset_tag={params.asset_tag}"
-    elif params.serial_number:
-        query_params["sysparm_query"] = f"serial_number={params.serial_number}"
-    else:
-        return {"success": False, "message": "At least one search parameter is required"}
-
-    query_params["sysparm_limit"] = "1"
-    query_params["sysparm_display_value"] = "true"
-
-    # Make request
-    try:
-        response = requests.get(
-            api_url,
-            params=query_params,
-            headers=auth_manager.get_headers(),
-            timeout=config.timeout,
-        )
-        response.raise_for_status()
-
-        result = response.json().get("result", [])
-        if not result:
-            return {"success": False, "message": "Asset not found"}
-
-        return {"success": True, "message": "Asset found", "asset": result[0]}
-
-    except requests.RequestException as e:
-        logger.error(f"Failed to get asset: {e}")
-        return {"success": False, "message": f"Failed to get asset: {str(e)}"}
-
-
-def list_assets(
-    config: ServerConfig,
-    auth_manager: AuthManager,
-    params: ListAssetsParams,
-) -> dict:
-    """
-    List assets from ServiceNow.
-
-    Args:
-        config: Server configuration.
-        auth_manager: Authentication manager.
-        params: Parameters for listing assets.
-
-    Returns:
-        Dictionary containing list of assets.
+        Dictionary containing list of assets (always returns a list, even for single asset lookups).
     """
     api_url = f"{config.api_url}/table/alm_asset"
     query_params = {
@@ -505,30 +451,45 @@ def list_assets(
         "sysparm_display_value": "true",
     }
 
-    # Build query
+    # Build query based on parameters
     query_parts = []
-    if params.assigned_to:
-        # Resolve user if username is provided
-        user_ids = []
-        for i, user in enumerate(params.assigned_to):
-            user_id = resolve_user_id(config, auth_manager, user)
+    
+    # Single asset identification (highest priority)
+    if params.asset_id:
+        query_parts.append(f"sys_id={params.asset_id}")
+    elif params.asset_tag:
+        query_parts.append(f"asset_tag={params.asset_tag}")
+    elif params.serial_number:
+        query_parts.append(f"serial_number={params.serial_number}")
+    else:
+        # User assignment filtering
+        if params.assigned_to:
+            user_id = resolve_user_id(config, auth_manager, params.assigned_to) or params.assigned_to
             if user_id:
-                user_ids.append(user_id)
-        query_parts.append(f"assigned_toIN{','.join(user_ids)}")
+                query_parts.append(f"assigned_to={user_id}")
 
-    if params.location:
-        query_parts.append(f"location={params.location}")
-    if params.name:
-        # Search by display name using LIKE matching
-        query_parts.append(f"display_nameLIKE{params.name}")
-    if params.query:
-        # Fallback to search by asset tag, display name, serial number, model or short description
-        query_parts.append(
-            f"^asset_tagLIKE{params.query}^ORdisplay_nameLIKE{params.query}^ORserial_numberLIKE{params.query}^ORmodelLIKE{params.query}^ORshort_descriptionLIKE{params.query}"
-        )
+        # Location filtering
+        if params.location:
+            query_parts.append(f"location={params.location}")
+        
+        # Name search (with exact match option)
+        if params.name:
+            if params.exact_match:
+                query_parts.append(f"display_name={params.name}")
+            else:
+                query_parts.append(f"display_nameLIKE{params.name}")
+        
+        # General query search
+        if params.query:
+            query_parts.append(
+                f"^asset_tagLIKE{params.query}^ORdisplay_nameLIKE{params.query}^ORserial_numberLIKE{params.query}^ORmodelLIKE{params.query}^ORshort_descriptionLIKE{params.query}"
+            )
 
+    # Apply query if we have any conditions
     if query_parts:
         query_params["sysparm_query"] = "^".join(query_parts)
+    else:
+        return {"success": False, "message": "At least one search parameter is required"}
 
     # Make request
     try:
@@ -541,74 +502,26 @@ def list_assets(
         response.raise_for_status()
 
         result = response.json().get("result", [])
-
-        return {
+        
+        # Always return a list of assets
+        response_data = {
             "success": True,
             "message": f"Found {len(result)} assets",
             "assets": result,
             "count": len(result),
         }
+        
+        # Add search-specific metadata
+        if params.name:
+            response_data["search_term"] = params.name
+            response_data["exact_match"] = params.exact_match
+            response_data["message"] = f"Found {len(result)} assets matching name '{params.name}'"
+        
+        return response_data
 
     except requests.RequestException as e:
-        logger.error(f"Failed to list assets: {e}")
-        return {"success": False, "message": f"Failed to list assets: {str(e)}"}
-
-
-def search_assets_by_name(
-    config: ServerConfig,
-    auth_manager: AuthManager,
-    params: SearchAssetsByNameParams,
-) -> dict:
-    """
-    Search for assets by display name using LIKE matching.
-
-    Args:
-        config: Server configuration.
-        auth_manager: Authentication manager.
-        params: Parameters for searching assets by name.
-
-    Returns:
-        Dictionary containing list of matching assets.
-    """
-    api_url = f"{config.api_url}/table/alm_asset"
-    query_params = {
-        "sysparm_limit": str(params.limit),
-        "sysparm_offset": str(params.offset),
-        "sysparm_display_value": "true",
-    }
-
-    # Build query for name search
-    if params.exact_match:
-        # Exact match
-        query_params["sysparm_query"] = f"display_name={params.name}"
-    else:
-        # LIKE matching (case-insensitive partial match)
-        query_params["sysparm_query"] = f"display_nameLIKE{params.name}"
-
-    # Make request
-    try:
-        response = requests.get(
-            api_url,
-            params=query_params,
-            headers=auth_manager.get_headers(),
-            timeout=config.timeout,
-        )
-        response.raise_for_status()
-
-        result = response.json().get("result", [])
-
-        return {
-            "success": True,
-            "message": f"Found {len(result)} assets matching name '{params.name}'",
-            "assets": result,
-            "count": len(result),
-            "search_term": params.name,
-            "exact_match": params.exact_match,
-        }
-
-    except requests.RequestException as e:
-        logger.error(f"Failed to search assets by name: {e}")
-        return {"success": False, "message": f"Failed to search assets by name: {str(e)}"}
+        logger.error(f"Failed to get assets: {e}")
+        return {"success": False, "message": f"Failed to get assets: {str(e)}"}
 
 
 def delete_asset(
