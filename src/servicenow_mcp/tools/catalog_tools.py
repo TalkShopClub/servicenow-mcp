@@ -127,6 +127,9 @@ def order_catalog_item(
         ),
     }
 
+    # Add quantity to variables as well because it is mandatory 
+    order_data["variables"]["quantity"] = params.quantity
+
     # Make API call 
     try:     
         url = f"{config.instance_url}/api/sn_sc/servicecatalog/items/{catalog_item_id}/order_now"
