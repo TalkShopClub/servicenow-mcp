@@ -65,7 +65,7 @@ class ResolveIncidentParams(BaseModel):
 
     incident_id: str = Field(..., description="Incident ID or sys_id")
     resolution_code: str = Field(..., description="Resolution code for the incident")
-    resolution_notes: str = Field(..., description="Resolution notes for the incident")
+    resolution_notes: Optional[str] = Field(None, description="Resolution notes/comment for the incident")
 
 
 class ListIncidentsParams(BaseModel):
@@ -249,7 +249,7 @@ def update_incident(
         data["impact"] = params.impact
     if params.urgency:
         data["urgency"] = params.urgency
-    if params.assigned_to:
+    if params.assigned_to is not None:
         data["assigned_to"] = params.assigned_to
     if params.assignment_group:
         data["assignment_group"] = params.assignment_group
@@ -438,7 +438,7 @@ def resolve_incident(
     data = {
         "state": "6",  # Resolved
         "close_code": params.resolution_code,
-        "close_notes": params.resolution_notes,
+        "close_notes": params.resolution_notes if params.resolution_notes else "",
         "resolved_at": "now",
     }
 
@@ -542,6 +542,8 @@ def list_incidents(
                 "subcategory": incident_data.get("subcategory"),
                 "created_on": incident_data.get("sys_created_on"),
                 "updated_on": incident_data.get("sys_updated_on"),
+                "comments": incident_data.get("comments"),
+                "work_notes": incident_data.get("work_notes"),
             }
             incidents.append(incident)
         
@@ -622,6 +624,8 @@ def get_incident_by_number(
             "subcategory": incident_data.get("subcategory"),
             "created_on": incident_data.get("sys_created_on"),
             "updated_on": incident_data.get("sys_updated_on"),
+            "comments": incident_data.get("comments"),
+            "work_notes": incident_data.get("work_notes"),
         }
 
         return {

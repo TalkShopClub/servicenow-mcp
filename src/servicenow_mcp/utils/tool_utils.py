@@ -14,12 +14,18 @@ from servicenow_mcp.tools.catalog_optimization import (
 )
 from servicenow_mcp.tools.catalog_tools import (
     CreateCatalogCategoryParams,
+    DeleteCatalogCategoryParams,
     GetCatalogItemParams,
     ListCatalogCategoriesParams,
     ListCatalogItemsParams,
     MoveCatalogItemsParams,
     UpdateCatalogCategoryParams,
     OrderCatalogItemParams,
+    CreateCatalogItemParams,
+)
+from servicenow_mcp.tools.catalog_tools import (
+    create_catalog_item as create_catalog_item_tool,
+    delete_catalog_category as delete_catalog_category_tool,
 )
 from servicenow_mcp.tools.catalog_tools import (
     create_catalog_category as create_catalog_category_tool,
@@ -204,6 +210,7 @@ from servicenow_mcp.tools.script_include_tools import (
     update_script_include as update_script_include_tool,
 )
 from servicenow_mcp.tools.user_tools import (
+    ListGroupMembersParams,
     AddGroupMembersParams,
     CreateGroupParams,
     CreateUserParams,
@@ -215,6 +222,7 @@ from servicenow_mcp.tools.user_tools import (
     UpdateUserParams,
 )
 from servicenow_mcp.tools.user_tools import (
+    list_group_members as list_group_members_tool,
     add_group_members as add_group_members_tool,
 )
 from servicenow_mcp.tools.user_tools import (
@@ -345,6 +353,7 @@ from servicenow_mcp.tools.asset_tools import (
     TransferAssetParams,
     ListHardwareAssetsParams,
     CreateHardwareAssetParams,
+    UpdateHardwareAssetParams,
 )
 from servicenow_mcp.tools.asset_tools import (
     create_asset as create_asset_tool,
@@ -354,7 +363,7 @@ from servicenow_mcp.tools.asset_tools import (
     transfer_asset as transfer_asset_tool,
     list_hardware_assets as list_hardware_assets_tool,
     create_hardware_asset as create_hardware_asset_tool,
-
+    update_hardware_asset as update_hardware_asset_tool,
 )
 from servicenow_mcp.tools.record_tools import (
     CreateProblemParams,
@@ -472,6 +481,13 @@ def get_tool_definitions(
             "List service catalog items.",
             "json",  # Tool returns list/dict
         ),
+        "create_catalog_item": (
+            create_catalog_item_tool,
+            CreateCatalogItemParams,
+            str,  # Expects JSON string
+            "Create a new service catalog item.",
+            "json_dict",  # Tool returns Pydantic model
+        ),
         "get_catalog_item": (
             get_catalog_item_tool,
             GetCatalogItemParams,
@@ -491,6 +507,13 @@ def get_tool_definitions(
             CreateCatalogCategoryParams,
             str,  # Expects JSON string
             "Create a new service catalog category.",
+            "json_dict",  # Tool returns Pydantic model
+        ),
+        "delete_catalog_category": (
+            delete_catalog_category_tool,
+            DeleteCatalogCategoryParams,
+            str,  # Expects JSON string
+            "Delete an existing service catalog category.",
             "json_dict",  # Tool returns Pydantic model
         ),
         "update_catalog_category": (
@@ -887,6 +910,13 @@ def get_tool_definitions(
             "Update an existing group in ServiceNow",
             "raw_dict",
         ),
+        "list_group_members": (
+            list_group_members_tool,
+            ListGroupMembersParams,
+            Dict[str, Any],  # Expects dict
+            "List members of an existing group in ServiceNow",
+            "raw_dict",
+        ),
         "add_group_members": (
             add_group_members_tool,
             AddGroupMembersParams,
@@ -1075,6 +1105,13 @@ def get_tool_definitions(
             Dict[str,Any],
             "Create a new hardware asset in ServiceNow",
             "str",
+        ),
+        "update_hardware_asset": (
+            update_hardware_asset_tool,
+            UpdateHardwareAssetParams,
+            Dict[str, Any],
+            "Update an existing hardware asset in ServiceNow",
+            "raw_dict",
         ),
         # Request Management Tools
         "create_item_request": (

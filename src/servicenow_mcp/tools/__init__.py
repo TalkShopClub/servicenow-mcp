@@ -15,6 +15,7 @@ from servicenow_mcp.tools.asset_tools import (
     delete_asset,
     list_hardware_assets,
     create_hardware_asset,
+    update_hardware_asset,
 )
 
 from servicenow_mcp.tools.catalog_optimization import (
@@ -23,6 +24,8 @@ from servicenow_mcp.tools.catalog_optimization import (
 )
 from servicenow_mcp.tools.catalog_tools import (
     create_catalog_category,
+    delete_catalog_category,
+    create_catalog_item,
     get_catalog_item,
     list_catalog_categories,
     list_catalog_items,
@@ -86,6 +89,7 @@ from servicenow_mcp.tools.user_tools import (
     list_users,
     create_group,
     update_group,
+    list_group_members,
     add_group_members,
     remove_group_members,
     list_groups,
@@ -158,8 +162,10 @@ __all__ = [
     
     # Catalog tools
     "list_catalog_items",
+    "delete_catalog_category",
     "get_catalog_item",
     "list_catalog_categories",
+    "create_catalog_item",
     "create_catalog_category",
     "update_catalog_category",
     "move_catalog_items",
@@ -228,6 +234,7 @@ __all__ = [
     "list_users",
     "create_group",
     "update_group",
+    "list_group_members",
     "add_group_members",
     "remove_group_members",
     "list_groups",
@@ -262,6 +269,7 @@ __all__ = [
     "delete_asset",
     "list_hardware_assets",
     "create_hardware_asset",
+    "update_hardware_asset",
 
     # Request tools
     "create_item_request",

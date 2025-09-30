@@ -102,6 +102,11 @@ class UpdateGroupParams(BaseModel):
     email: Optional[str] = Field(None, description="Email address for the group")
     active: Optional[bool] = Field(None, description="Whether the group is active")
 
+class ListGroupMembersParams(BaseModel): 
+    """Parameters for listing members of a group."""
+
+    group_id: str = Field(..., description="Group ID or sys_id") 
+
 
 class AddGroupMembersParams(BaseModel):
     """Parameters for adding members to a group."""
@@ -117,7 +122,7 @@ class RemoveGroupMembersParams(BaseModel):
 
     group_id: str = Field(..., description="Group ID or sys_id")
     members: List[str] = Field(
-        ..., description="List of user sys_ids or usernames to remove as members"
+        ..., description="List of user sys_ids or usernames to remove as members. sys_id prefix must be included if providing user sys_id. Example: ['sys_id:49339c38530360100999ddeeff7b1242']"
     )
 
 
@@ -748,6 +753,44 @@ def update_group(
             message=f"Failed to update group: {str(e)}",
         )
 
+def list_group_members(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: ListGroupMembersParams,
+) -> GroupResponse:
+    """
+    List members of a group in ServiceNow.
+    """
+    api_url = f"{config.api_url}/table/sys_user_grmember"
+    query_params = {
+        "sysparm_query": f"group={params.group_id}",
+        "sysparm_limit": "100",
+        "sysparm_fields": "user",
+    }
+    
+    try:
+        response = requests.get(
+            api_url,
+            params=query_params,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+
+        result = response.json().get("result", [])
+
+        return {
+            "success": True,
+            "message": f"Found {len(result)} group members",
+            "group_members": result,
+            "count": len(result),
+        }
+    except requests.RequestException as e:
+        logger.error(f"Failed to list group members: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to list group members: {str(e)}",
+        }
 
 def add_group_members(
     config: ServerConfig,
@@ -784,6 +827,8 @@ def add_group_members(
                 success = False
                 failed_members.append(member)
                 continue
+        else: 
+            user_id = member.split("sys_id:")[1]
 
         # Create group membership
         data = {
@@ -849,6 +894,8 @@ def remove_group_members(
                 success = False
                 failed_members.append(member)
                 continue
+        else:  
+            user_id = member.split("sys_id:")[1]
 
         # Find and delete the group membership
         api_url = f"{config.api_url}/table/sys_user_grmember"

@@ -134,7 +134,7 @@ agile_management:
   # Asset Management
   - create_asset
   - update_asset
-  - get_asset
+  - get_assets
   - list_assets
   - delete_asset
   - transfer_asset
@@ -151,12 +151,13 @@ system_administrator:
   - create_group
   - update_group
   - list_groups
+  - list_group_members
   - add_group_members
   - remove_group_members
   # Asset Management
   - create_asset
   - update_asset
-  - get_asset
+  - get_assets
   - list_assets
   - delete_asset
   - transfer_asset
@@ -179,6 +180,7 @@ full:
   # Catalog (Core)
   - list_catalogs
   - list_catalog_items
+  - create_catalog_item
   - get_catalog_item
   - create_catalog_item
   - update_catalog_item
@@ -186,6 +188,7 @@ full:
   # Catalog (Categories)
   - list_catalog_categories
   - create_catalog_category
+  - delete_catalog_category
   - update_catalog_category
   - move_catalog_items
   # Catalog (Optimization)
@@ -250,6 +253,7 @@ full:
   - list_users
   - create_group
   - update_group
+  - list_group_members
   - add_group_members
   - remove_group_members
   - list_groups
@@ -284,13 +288,14 @@ full:
   # Asset Management
   - create_asset
   - update_asset
-  - get_asset
+  - get_assets
   - list_assets
   - delete_asset
   - transfer_asset
   - search_assets_by_name
   - list_hardware_assets
   - create_hardware_asset
+  - update_hardware_asset
   # Request Management 
   - create_item_request
   - list_item_requests

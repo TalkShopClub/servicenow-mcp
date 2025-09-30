@@ -24,9 +24,20 @@ class OrderCatalogItemParams(BaseModel):
     quantity: str = Field(..., description="Quantity of the catalog item to order")
     requested_for: str = Field("", description="Name or sys_id of the person requesting the item. sys_id is preferred.")
 
+class CreateCatalogItemParams(BaseModel):
+    """Parameters for creating a service catalog item."""
+    
+    name: str = Field(..., description="Name of the catalog item")
+    category: Optional[str] = Field(None, description="Category of the catalog item")
+    active: bool = Field(True, description="Whether the catalog item is active")
+    order: Optional[int] = Field(None, description="Order of the catalog item")
+    description: Optional[str] = Field(None, description="Description of the catalog item")
+    price: Optional[str] = Field(None, description="Price of the catalog item")
+
 class ListCatalogItemsParams(BaseModel):
     """Parameters for listing service catalog items."""
     
+    item_ids: Optional[List[str]] = Field(None, description="List of catalog item IDs to return")
     limit: int = Field(10, description="Maximum number of catalog items to return")
     offset: int = Field(0, description="Offset for pagination")
     category: Optional[str] = Field(None, description="Filter by category")
@@ -43,6 +54,7 @@ class GetCatalogItemParams(BaseModel):
 class ListCatalogCategoriesParams(BaseModel):
     """Parameters for listing service catalog categories."""
     
+    category_ids: Optional[List[str]] = Field(None, description="List of catalog category sys_ids to return if provided.")
     limit: int = Field(10, description="Maximum number of categories to return")
     offset: int = Field(0, description="Offset for pagination")
     query: Optional[str] = Field(None, description="Search query for categories")
@@ -78,6 +90,11 @@ class UpdateCatalogCategoryParams(BaseModel):
     icon: Optional[str] = Field(None, description="Icon for the category")
     active: Optional[bool] = Field(None, description="Whether the category is active")
     order: Optional[int] = Field(None, description="Order of the category")
+
+class DeleteCatalogCategoryParams(BaseModel):
+    """Parameters for deleting a service catalog category."""
+    
+    category_id: str = Field(..., description="Category ID or sys_id")
 
 
 class MoveCatalogItemsParams(BaseModel):
@@ -153,6 +170,71 @@ def order_catalog_item(
         data=result,
     )
 
+def create_catalog_item(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: CreateCatalogItemParams,
+) -> CatalogResponse:
+    """
+    Create a service catalog item in ServiceNow.
+    """
+    logger.info(f"Creating service catalog item: {params.name}")
+    
+    # Build the API URL
+    url = f"{config.instance_url}/api/now/table/sc_cat_item"
+    
+    # Prepare request body
+    body = {
+        "name": params.name,
+        "active": str(params.active).lower()
+    }
+
+    if params.category:
+        body["category"] = params.category
+    if params.description:
+        body["description"] = params.description
+    if params.price:
+        body["price"] = params.price
+    if params.order:
+        body["order"] = params.order
+    
+    # Make the API request
+    headers = auth_manager.get_headers()
+    headers["Accept"] = "application/json"
+    headers["Content-Type"] = "application/json"
+    
+    try:
+        response = requests.post(url, headers=headers, json=body)
+        response.raise_for_status()
+        
+        # Process the response
+        result = response.json()
+        item = result.get("result", {})
+        
+        # Format the response
+        formatted_item = {
+            "sys_id": item.get("sys_id", ""),
+            "name": item.get("name", ""),
+            "short_description": item.get("short_description", ""),
+            "category": item.get("category", ""),
+            "price": item.get("price", ""),
+            "active": item.get("active", ""),
+            "order": item.get("order", ""),
+        }
+        
+        return CatalogResponse(
+            success=True,
+            message=f"Created catalog item: {params.name}",
+            data=formatted_item,
+        )
+    
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error creating catalog item: {str(e)}")
+        return CatalogResponse(
+            success=False,
+            message=f"Error creating catalog item: {str(e)}",
+            data=None,
+        )
 
 def list_catalog_items(
     config: ServerConfig,
@@ -185,6 +267,8 @@ def list_catalog_items(
     
     # Add filters
     filters = []
+    if params.item_ids:
+        filters.append(f"sys_idIN{','.join(params.item_ids)}")
     if params.active:
         filters.append("active=true")
     if params.category:
@@ -411,6 +495,8 @@ def list_catalog_categories(
     
     # Add filters
     filters = []
+    if params.category_ids:
+        filters.append(f"sys_idIN{','.join(params.category_ids)}")
     if params.active:
         filters.append("active=true")
     if params.query:
@@ -615,6 +701,40 @@ def update_catalog_category(
             data=None,
         )
 
+def delete_catalog_category(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: DeleteCatalogCategoryParams,
+) -> CatalogResponse:
+    """
+    Delete a service catalog category in ServiceNow.
+    """
+    logger.info(f"Deleting service catalog category: {params.category_id}")
+    
+    # Build the API URL
+    url = f"{config.instance_url}/api/now/table/sc_category/{params.category_id}"
+    
+    # Make the API request
+    headers = auth_manager.get_headers()
+    headers["Accept"] = "application/json"
+    
+    try:
+        response = requests.delete(url, headers=headers)
+        response.raise_for_status()
+        
+        return CatalogResponse(
+            success=True,
+            message=f"Deleted catalog category: {params.category_id}",
+            data=None,
+        )
+    
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error deleting catalog category: {str(e)}")
+        return CatalogResponse(
+            success=False,
+            message=f"Error deleting catalog category: {str(e)}",
+            data=None,
+        )
 
 def move_catalog_items(
     config: ServerConfig,
