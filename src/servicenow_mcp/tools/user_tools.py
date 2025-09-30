@@ -266,7 +266,7 @@ def update_user(
         data["title"] = params.title
     if params.department:
         data["department"] = params.department
-    if params.manager:
+    if params.manager is not None:
         data["manager"] = params.manager
     if params.phone:
         data["phone"] = params.phone
