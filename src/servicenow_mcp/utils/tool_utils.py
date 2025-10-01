@@ -254,6 +254,7 @@ from servicenow_mcp.tools.workflow_tools import (
     AddWorkflowActivityParams,
     CreateWorkflowParams,
     DeactivateWorkflowParams,
+    DeleteWorkflowParams,
     DeleteWorkflowActivityParams,
     GetWorkflowActivitiesParams,
     GetWorkflowDetailsParams,
@@ -277,6 +278,9 @@ from servicenow_mcp.tools.workflow_tools import (
 )
 from servicenow_mcp.tools.workflow_tools import (
     delete_workflow_activity as delete_workflow_activity_tool,
+)
+from servicenow_mcp.tools.workflow_tools import (
+    delete_workflow as delete_workflow_tool,
 )
 from servicenow_mcp.tools.workflow_tools import (
     get_workflow_activities as get_workflow_activities_tool,
@@ -706,6 +710,13 @@ def get_tool_definitions(
             DeleteWorkflowActivityParams,
             str,
             "Delete an activity from a workflow",
+            "str",  # Tool returns simple message
+        ),
+        "delete_workflow": (
+            delete_workflow_tool,
+            DeleteWorkflowParams,
+            str,
+            "Delete a workflow",
             "str",  # Tool returns simple message
         ),
         "reorder_workflow_activities": (

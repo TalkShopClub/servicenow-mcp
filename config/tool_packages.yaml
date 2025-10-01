@@ -97,6 +97,7 @@ platform_developer:
   - add_workflow_activity
   - update_workflow_activity
   - delete_workflow_activity
+  - delete_workflow
   - reorder_workflow_activities
   - get_workflow_activities
   # General UI Policies
@@ -220,6 +221,7 @@ full:
   - add_workflow_activity
   - update_workflow_activity
   - delete_workflow_activity
+  - delete_workflow
   - reorder_workflow_activities
   # Changeset
   - list_changesets
@@ -266,25 +268,25 @@ full:
   # UI Policy
   - create_ui_policy
   - create_ui_policy_action
-  # Story Management
-  - create_story
-  - update_story
-  - list_stories
-  - list_story_dependencies
-  - create_story_dependency
-  - delete_story_dependency
-  # Epic Management
-  - create_epic
-  - update_epic
-  - list_epics
-  # Scrum Task Management
-  - create_scrum_task
-  - update_scrum_task
-  - list_scrum_tasks
-  # Project Management
-  - create_project
-  - update_project
-  - list_projects
+  # # Story Management
+  # - create_story
+  # - update_story
+  # - list_stories
+  # - list_story_dependencies
+  # - create_story_dependency
+  # - delete_story_dependency
+  # # Epic Management
+  # - create_epic
+  # - update_epic
+  # - list_epics
+  # # Scrum Task Management
+  # - create_scrum_task
+  # - update_scrum_task
+  # - list_scrum_tasks
+  # # Project Management
+  # - create_project
+  # - update_project
+  # - list_projects
   # Asset Management
   - create_asset
   - update_asset

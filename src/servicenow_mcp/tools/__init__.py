@@ -100,6 +100,7 @@ from servicenow_mcp.tools.workflow_tools import (
     create_workflow,
     deactivate_workflow,
     delete_workflow_activity,
+    delete_workflow,
     get_workflow_activities,
     get_workflow_details,
     list_workflow_versions,
@@ -198,6 +199,7 @@ __all__ = [
     "add_workflow_activity",
     "update_workflow_activity",
     "delete_workflow_activity",
+    "delete_workflow",
     "reorder_workflow_activities",
     
     # Changeset tools
