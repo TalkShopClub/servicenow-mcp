@@ -20,7 +20,7 @@ class GetTableSchemaParams(BaseModel):
     """Parameters for listing script includes."""
     
     table_names: List[str] = Field(..., description="List of table names to get the schema for")
-    field_names: Optional[List[str]] = Field(None, description="List of field names to get the schema for")
+    field_names: Optional[Dict[str, List[str]]] = Field(None, description="Dictionary of table names and list of field names to get the schema for, example: {'incident': ['incident_state', 'close_code']}")
 
 
 def get_table_schema(
@@ -81,9 +81,15 @@ def get_table_schema(
 
             resp_dict_result = resp_dict.json().get("result", [])
             resp_choice_result = resp_choice.json().get("result", [])
-            
+
+            if params.field_names:
+                field_names = params.field_names.get(table_name, None)
+            else:
+                field_names = None
+            # breakpoint()
             for dict_record in resp_dict_result:
-                if params.field_names and dict_record['element'] not in params.field_names:
+                # breakpoint()
+                if field_names and dict_record['element'] not in field_names:
                     continue
                 temp = {}
                 temp['column_name'] = dict_record['element']
