@@ -148,6 +148,9 @@ from servicenow_mcp.tools.report_tools import (
     get_dashboard_tab,
     search_any_table,
 )
+from servicenow_mcp.tools.schema_tools import (
+    get_table_schema,
+)
 # from servicenow_mcp.tools.request_tools import create_request, update_request
 
 __all__ = [
@@ -288,4 +291,7 @@ __all__ = [
     "get_portal_widgets",
     "get_dashboard_tab",
     "search_any_table",
+
+    # schema tools
+    "get_table_schema",
 ] 

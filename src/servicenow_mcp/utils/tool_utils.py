@@ -409,6 +409,13 @@ from servicenow_mcp.tools.report_tools import (
     search_any_table as search_any_table_tool,
 )
 
+from servicenow_mcp.tools.schema_tools import (
+    GetTableSchemaParams,
+)
+from servicenow_mcp.tools.schema_tools import (
+    get_table_schema as get_table_schema_tool,
+)
+
 from servicenow_mcp.auth.auth_manager import AuthManager
 from servicenow_mcp.utils.config import ServerConfig
 import requests
@@ -1197,6 +1204,13 @@ def get_tool_definitions(
             GetAnyTableParams,
             Dict[str, Any],
             "Search any ServiceNow table.",
+            "raw_dict",
+        ),
+        "get_table_schema": (
+            get_table_schema_tool,
+            GetTableSchemaParams,
+            Dict[str, Any],
+            "Get the schema of a ServiceNow table.",
             "raw_dict",
         ),
     }
