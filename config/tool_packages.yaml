@@ -134,6 +134,7 @@ agile_management:
   - list_projects
   # Asset Management
   - create_asset
+  - create_currency_instance
   - update_asset
   - get_assets
   - list_assets
@@ -171,6 +172,45 @@ system_administrator:
 schema_manager:
   # Schema Management
   - get_table_schema
+
+
+get_request_tools:
+  - get_article
+  - get_assets
+  - get_canvas
+  - get_catalog_item
+  - get_change_request_details
+  - get_changeset_details
+  - get_dashboard_tab
+  - get_optimization_recommendations
+  - get_portal_widgets
+  - get_report
+  - get_report_ids_from_portal_widgets
+  - get_script_include
+  - get_table_schema
+  - get_user
+  - get_workflow_activities
+  - get_workflow_details
+  - list_articles
+  - list_catalog_categories
+  - list_catalog_item_variables
+  - list_catalog_items
+  - list_categories
+  - list_change_requests
+  - list_changesets
+  - list_expense_lines
+  - list_group_members
+  - list_groups
+  - list_hardware_assets
+  - list_incidents
+  - list_item_requests
+  - list_knowledge_bases
+  - list_script_includes
+  - list_tool_packages
+  - list_users
+  - list_workflow_versions
+  - list_workflows
+  - search_any_table
 
 full:
   # Incident Management
@@ -293,6 +333,7 @@ full:
   # - list_projects
   # Asset Management
   - create_asset
+  - create_currency_instance
   - update_asset
   - get_assets
   - list_assets

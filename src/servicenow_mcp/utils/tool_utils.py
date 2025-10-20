@@ -350,6 +350,7 @@ from servicenow_mcp.tools.project_tools import (
     list_projects as list_projects_tool,
 )
 from servicenow_mcp.tools.asset_tools import (
+    CreateCurrencyInstanceParams,
     CreateAssetParams,
     UpdateAssetParams,
     GetAssetsParams,
@@ -360,6 +361,7 @@ from servicenow_mcp.tools.asset_tools import (
     UpdateHardwareAssetParams,
 )
 from servicenow_mcp.tools.asset_tools import (
+    create_currency_instance as create_currency_instance_tool,
     create_asset as create_asset_tool,
     update_asset as update_asset_tool,
     get_assets as get_assets_tool,
@@ -1072,6 +1074,13 @@ def get_tool_definitions(
             str,
             "Create a new asset in ServiceNow",
             "str",
+        ),
+        "create_currency_instance": (
+            create_currency_instance_tool,
+            CreateCurrencyInstanceParams,
+            Dict[str, Any],
+            "Create a new currency instance in ServiceNow",
+            "raw_dict",
         ),
         "update_asset": (
             update_asset_tool,

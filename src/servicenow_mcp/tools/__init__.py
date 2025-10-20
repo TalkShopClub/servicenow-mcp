@@ -16,6 +16,7 @@ from servicenow_mcp.tools.asset_tools import (
     list_hardware_assets,
     create_hardware_asset,
     update_hardware_asset,
+    create_currency_instance,
 )
 
 from servicenow_mcp.tools.catalog_optimization import (
@@ -269,6 +270,7 @@ __all__ = [
 
     # Asset tools
     "create_asset",
+    "create_currency_instance",
     "update_asset",
     "get_assets",
     "delete_asset",
