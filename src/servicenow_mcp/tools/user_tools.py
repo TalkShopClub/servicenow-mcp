@@ -328,6 +328,44 @@ def create_user_clearance(
         message="User clearance created successfully"
     )
 
+def create_group_clearance(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    group_id: str,
+    clearance_level: int,
+) -> GroupResponse:
+    """
+    Create clearance level for a group in ServiceNow.
+    """
+
+    api_url = f"{config.api_url}/table/u_user_group_clearance"
+    data = {
+        "u_group": group_id,
+        "u_clearance_level": clearance_level,
+    }
+    try:
+        response = requests.post(
+            api_url,
+            json=data,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+    except requests.RequestException as e:
+        logger.error(f"Failed to create group clearance: {e}")
+        return GroupResponse(
+            success=False,
+            message=f"Failed to create group clearance: {str(e)}",
+        )
+
+    result = response.json().get("result", {})
+    return GroupResponse(
+        success=True,
+        message="Group clearance created successfully", 
+        group_id=result.get("u_group"),
+        clearance_level=result.get("u_clearance_level"),
+    )
+
 def update_user_clearance(
     config: ServerConfig,
     auth_manager: AuthManager,
@@ -350,8 +388,12 @@ def update_user_clearance(
         timeout=config.timeout,
     )
     response.raise_for_status()
-    clearance_record_id = response.json().get("result", [])[0].get("sys_id")
 
+    # If no record is found, create a new record
+    if not response.json().get("result"):
+        return create_user_clearance(config, auth_manager, params.user_id, params.clearance_level)
+
+    clearance_record_id = response.json().get("result", [])[0].get("sys_id")
 
     api_url = f"{config.api_url}/table/u_user_group_clearance/{clearance_record_id}"
     data = {
@@ -403,6 +445,11 @@ def update_group_clearance(
         timeout=config.timeout,
     )
     response.raise_for_status()
+
+    # If no record is found, create a new record
+    if not response.json().get("result"):
+        return create_group_clearance(config, auth_manager, params.group_id, params.clearance_level)
+
     clearance_record_id = response.json().get("result", [])[0].get("sys_id")
 
     api_url = f"{config.api_url}/table/u_user_group_clearance/{clearance_record_id}"
