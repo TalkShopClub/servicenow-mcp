@@ -336,7 +336,24 @@ def update_user_clearance(
     """
     Update clearance level for a user in ServiceNow.
     """
-    api_url = f"{config.api_url}/table/u_user_group_clearance/{params.user_id}"
+
+    # Get record id of u_user_group_clearance record that has u_user = params.user_id
+    api_url = f"{config.api_url}/table/u_user_group_clearance"
+    query_params = {
+        "sysparm_query": f"u_user={params.user_id}",
+        "sysparm_limit": "1",
+    }
+    response = requests.get(
+        api_url,
+        params=query_params,
+        headers=auth_manager.get_headers(),
+        timeout=config.timeout,
+    )
+    response.raise_for_status()
+    clearance_record_id = response.json().get("result", [])[0].get("sys_id")
+
+
+    api_url = f"{config.api_url}/table/u_user_group_clearance/{clearance_record_id}"
     data = {
         "u_clearance_level": params.clearance_level,
     }
@@ -372,7 +389,23 @@ def update_group_clearance(
     """
     Update clearance level for a group in ServiceNow.
     """
-    api_url = f"{config.api_url}/table/u_user_group_clearance/{params.group_id}"
+
+    # Get record id of u_user_group_clearance record that has u_group = params.group_id
+    api_url = f"{config.api_url}/table/u_user_group_clearance"
+    query_params = {
+        "sysparm_query": f"u_group={params.group_id}",
+        "sysparm_limit": "1",
+    }
+    response = requests.get(
+        api_url,
+        params=query_params,
+        headers=auth_manager.get_headers(),
+        timeout=config.timeout,
+    )
+    response.raise_for_status()
+    clearance_record_id = response.json().get("result", [])[0].get("sys_id")
+
+    api_url = f"{config.api_url}/table/u_user_group_clearance/{clearance_record_id}"
     data = {
         "u_clearance_level": params.clearance_level,
     }
