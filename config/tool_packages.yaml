@@ -206,6 +206,7 @@ full:
   - create_catalog_variable_choice
   # Change Management
   - create_change_request
+  - change_request_item_priority
   - update_change_request
   - list_change_requests
   - get_change_request_details
@@ -263,6 +264,10 @@ full:
   - add_group_members
   - remove_group_members
   - list_groups
+  - list_groups_clearance
+  - list_users_clearance
+  - update_group_clearance
+  - update_user_clearance
   # Syslog
   - list_syslog_entries
   - get_syslog_entry

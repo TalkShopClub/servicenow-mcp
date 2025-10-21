@@ -33,6 +33,7 @@ class CreateUserParams(BaseModel):
     password: Optional[str] = Field(None, description="Password for the user account")
     active: Optional[bool] = Field(True, description="Whether the user account is active")
     fields: Optional[Dict[str, str]] = Field(None, description="Dictionary of other field names and corresponding values to set for the POST request. Example: {'priority': '1'}")
+    clearance_level: Optional[int] = Field(None, description="Clearance level to set for the user. Clearance values are integers") 
 
 
 class UpdateUserParams(BaseModel):
@@ -138,6 +139,38 @@ class ListGroupsParams(BaseModel):
     )
     type: Optional[str] = Field(None, description="Filter by group type")
 
+# ---- CLEARANCE PYDANTIC MODELS ---- 
+
+class ListUserClearanceParams(BaseModel): 
+    """Parameters for listing clearance level for users""" 
+
+    user_ids: Optional[List[str]] = Field(None, description="List of user sys_ids")
+    clearance_levels: Optional[List[int]] = Field(None, description="List of clearance levels to filter by. Clearance values are integers") 
+
+class ListGroupClearanceParams(BaseModel): 
+    """Parameters for listing clearance level for groups""" 
+
+    group_ids: Optional[List[str]] = Field(None, description="List of User Group sys_ids")
+    clearance_levels: Optional[List[int]] = Field(None, description="List of clearance levels to filter by. Clearance values are integers") 
+
+class CreateUserClearanceParams(BaseModel): 
+    """Parameters for creating clearance level for a user""" 
+
+    user_id: str = Field(..., description="User sys_id")
+    clearance_level: int = Field(..., description="Clearance level to set for the user. Clearance values are integers") 
+
+class UpdateUserClearanceParams(BaseModel): 
+    """Parameters for updating clearance level for a user""" 
+
+    user_id: str = Field(..., description="User sys_id")
+    clearance_level: int = Field(..., description="Clearance level to set for the user. Clearance values are integers") 
+
+class UpdateGroupClearanceParams(BaseModel): 
+    """Parameters for updating clearance level for a group""" 
+
+    group_id: str = Field(..., description="User Group sys_id")
+    clearance_level: int = Field(..., description="Clearance level to set for the group. Clearance values are integers") 
+
 
 class UserResponse(BaseModel):
     """Response from user operations."""
@@ -146,6 +179,7 @@ class UserResponse(BaseModel):
     message: str = Field(..., description="Message describing the result")
     user_id: Optional[str] = Field(None, description="ID of the affected user")
     user_name: Optional[str] = Field(None, description="Username of the affected user")
+    clearance_level: Optional[int] = Field(None, description="Clearance level of the affected user")
 
 
 class GroupResponse(BaseModel):
@@ -155,7 +189,215 @@ class GroupResponse(BaseModel):
     message: str = Field(..., description="Message describing the result")
     group_id: Optional[str] = Field(None, description="ID of the affected group")
     group_name: Optional[str] = Field(None, description="Name of the affected group")
+    clearance_level: Optional[int] = Field(None, description="Clearance level of the affected group")
 
+def list_users_clearance(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: ListUserClearanceParams,
+) -> dict:
+    """
+    List clearance level for users in ServiceNow. 
+
+    Args:
+        config: Server configuration.
+        auth_manager: Authentication manager.
+        params: Parameters for listing clearance level for users.
+
+    Returns:
+        Dictionary containing list of users and their clearance level.
+    """
+
+    api_url = f"{config.api_url}/table/u_user_group_clearance"
+    query_params = {
+        "sysparm_limit": "100",
+        "sysparm_fields": "u_user,u_clearance_level",
+    }
+    if params.user_ids:
+        query_params["sysparm_query"] = f"u_userIN{','.join(params.user_ids)}"
+    if params.clearance_levels:
+        query_params["sysparm_query"] = f"u_clearance_levelIN{','.join(params.clearance_levels)}"
+
+    
+    try:
+        response = requests.get(
+            api_url,
+            params=query_params,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+    except requests.RequestException as e:
+        logger.error(f"Failed to list users clearance: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to list users clearance: {str(e)}",
+        }
+
+    result = response.json().get("result", [])
+    return {
+        "success": True,
+        "message": f"Found {len(result)} users clearance",
+        "users_clearance": result,
+        "count": len(result),
+    }
+
+def list_groups_clearance(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: ListGroupClearanceParams,
+) -> dict:
+    """
+    List clearance level for users in ServiceNow. 
+
+    Args:
+        config: Server configuration.
+        auth_manager: Authentication manager.
+        params: Parameters for listing clearance level for users.
+
+    Returns:
+        Dictionary containing list of users and their clearance level.
+    """
+
+    api_url = f"{config.api_url}/table/u_user_group_clearance"
+    query_params = {
+        "sysparm_limit": "100",
+        "sysparm_fields": "u_group,u_clearance_level",
+    }
+    if params.group_ids:
+        query_params["sysparm_query"] = f"u_groupIN{','.join(params.group_ids)}"
+    if params.clearance_levels:
+        query_params["sysparm_query"] = f"u_clearance_levelIN{','.join(params.clearance_levels)}"
+
+    
+    try:
+        response = requests.get(
+            api_url,
+            params=query_params,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+    except requests.RequestException as e:
+        logger.error(f"Failed to list groups clearance: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to list groups clearance: {str(e)}",
+        }
+
+    result = response.json().get("result", [])
+    return {
+        "success": True,
+        "message": f"Found {len(result)} groups clearance",
+        "groups_clearance": result,
+        "count": len(result),
+    }
+
+def create_user_clearance(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    user_id: str, 
+    clearance_level: int,
+) -> UserResponse:
+    """
+    Create clearance level for a user in ServiceNow.
+    """
+    api_url = f"{config.api_url}/table/u_user_group_clearance"
+    data = {
+        "u_user": user_id,
+        "u_clearance_level": clearance_level,
+    }
+    try:
+        response = requests.post(
+            api_url,
+            json=data,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+    except requests.RequestException as e:
+        logger.error(f"Failed to create user clearance: {e}")
+        return UserResponse(
+            success=False,
+            message=f"Failed to create user clearance: {str(e)}",
+        )
+
+    result = response.json().get("result", {})
+    return UserResponse(
+        success=True,
+        message="User clearance created successfully"
+    )
+
+def update_user_clearance(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: UpdateUserClearanceParams,
+) -> UserResponse:
+    """
+    Update clearance level for a user in ServiceNow.
+    """
+    api_url = f"{config.api_url}/table/u_user_group_clearance/{params.user_id}"
+    data = {
+        "u_clearance_level": params.clearance_level,
+    }
+    try:
+        response = requests.patch(
+            api_url,
+            json=data,
+            headers=auth_manager.get_headers(),
+
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+    except requests.RequestException as e:
+        logger.error(f"Failed to update user clearance: {e}")
+        return UserResponse(
+            success=False,
+            message=f"Failed to update user clearance: {str(e)}",
+        )
+
+    result = response.json().get("result", {})
+    return UserResponse(
+        success=True,
+        message="User clearance updated successfully",
+        user_id=result.get("u_user"),
+        clearance_level=result.get("u_clearance_level"),
+    )
+
+def update_group_clearance(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: UpdateGroupClearanceParams,
+) -> GroupResponse:
+    """
+    Update clearance level for a group in ServiceNow.
+    """
+    api_url = f"{config.api_url}/table/u_user_group_clearance/{params.group_id}"
+    data = {
+        "u_clearance_level": params.clearance_level,
+    }
+    try:
+        response = requests.patch(
+            api_url,
+            json=data,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+    except requests.RequestException as e:
+        logger.error(f"Failed to update group clearance: {e}")
+        return GroupResponse(
+            success=False,
+            message=f"Failed to update group clearance: {str(e)}",
+        )
+
+    result = response.json().get("result", {})
+    return GroupResponse(
+        success=True,
+        message="Group clearance updated successfully",
+        group_id=result.get("u_group"),
+        clearance_level=result.get("u_clearance_level"),
+    )
 
 def create_user(
     config: ServerConfig,
@@ -218,6 +460,10 @@ def create_user(
         # Handle role assignments if provided
         if params.roles and result.get("sys_id"):
             assign_roles_to_user(config, auth_manager, result.get("sys_id"), params.roles)
+
+        # Handle clearance level if provided
+        if params.clearance_level and result.get("sys_id"):
+            create_user_clearance(config, auth_manager, result.get("sys_id"), params.clearance_level)
 
         return UserResponse(
             success=True,

@@ -134,6 +134,8 @@ class CreateHardwareAssetParams(BaseModel):
     fields: Optional[Dict[str, str]] = Field(None, description="Dictionary of other field names and corresponding values to set for the hardware asset. Example: {'priority': '1'}")
     cost: Optional[str] = Field(None, description="Cost of the hardware asset")
     assigned_to: Optional[str] = Field(None, description="User assigned to the hardware asset (sys_id)")
+    environment: Optional[str] = Field(None, description="Environment of the hardware asset. Choose between 'production', 'staging' and 'development'")
+    required_clearance_level: Optional[int] = Field(None, description="Required clearance level for the hardware asset. Clearance values are integers")
 
 class UpdateHardwareAssetParams(BaseModel):
     """Parameters for updating a hardware asset."""
@@ -146,6 +148,8 @@ class UpdateHardwareAssetParams(BaseModel):
     fields: Optional[Dict[str, str]] = Field(None, description="Dictionary of other field names and corresponding values to set for the hardware asset. Example: {'priority': '1'}")
     cost: Optional[str] = Field(None, description="Cost of the hardware asset")
     assigned_to: Optional[str] = Field(None, description="User assigned to the hardware asset (sys_id)")
+    environment: Optional[str] = Field(None, description="Environment of the hardware asset. Choose between 'production', 'staging' and 'development'")
+    required_clearance_level: Optional[int] = Field(None, description="Required clearance level for the hardware asset. Clearance values are integers")
 
 def list_hardware_assets(
     config: ServerConfig,
@@ -249,6 +253,11 @@ def create_hardware_asset(
     if params.fields:
         for field, value in params.fields.items():
             data[field] = value
+        
+    if params.environment:
+        data["u_environment"] = params.environment
+    if params.required_clearance_level:
+        data["u_clearance"] = params.required_clearance_level
 
     # Make request
     try:
@@ -317,6 +326,11 @@ def update_hardware_asset(
                     success=False,
                     message=f"Could not resolve user: {params.assigned_to}",
                 )
+    
+    if params.environment:
+        data["u_environment"] = params.environment
+    if params.required_clearance_level:
+        data["u_clearance"] = params.required_clearance_level
     
     # Make request
     try:

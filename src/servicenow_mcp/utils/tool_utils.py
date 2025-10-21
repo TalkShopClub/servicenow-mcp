@@ -220,10 +220,18 @@ from servicenow_mcp.tools.user_tools import (
     RemoveGroupMembersParams,
     UpdateGroupParams,
     UpdateUserParams,
+    ListGroupClearanceParams,
+    ListUserClearanceParams,
+    UpdateGroupClearanceParams,
+    UpdateUserClearanceParams,
 )
 from servicenow_mcp.tools.user_tools import (
     list_group_members as list_group_members_tool,
     add_group_members as add_group_members_tool,
+    list_users_clearance as list_users_clearance_tool,
+    list_groups_clearance as list_groups_clearance_tool,
+    update_user_clearance as update_user_clearance_tool,
+    update_group_clearance as update_group_clearance_tool,
 )
 from servicenow_mcp.tools.user_tools import (
     create_group as create_group_tool,
@@ -378,10 +386,12 @@ from servicenow_mcp.tools.record_tools import (
 from servicenow_mcp.tools.request_tools import (
     CreateItemRequestParams,
     ListItemRequestsParams,
+    ChangeRequestItemPriorityParams,
 )
 from servicenow_mcp.tools.request_tools import (
     create_item_request as create_item_request_tool,
     list_item_requests as list_item_requests_tool,
+    change_request_item_priority as change_request_item_priority_tool,
 )
 
 from servicenow_mcp.tools.expense_tools import (
@@ -582,6 +592,13 @@ def get_tool_definitions(
             OrderCatalogItemParams,
             Dict[str, Any],  # Expects dict
             "Order a catalog item",
+            "dict",  # Tool returns Pydantic model
+        ),
+        "change_request_item_priority": (
+            change_request_item_priority_tool,
+            ChangeRequestItemPriorityParams,
+            Dict[str, Any],  # Expects dict
+            "Change the priority of a change request item",
             "dict",  # Tool returns Pydantic model
         ),
         # Change Management Tools
@@ -886,6 +903,34 @@ def get_tool_definitions(
             "raw_dict",  # Tool returns raw dict
         ),
         # User Management Tools
+        "list_users_clearance": (
+            list_users_clearance_tool,
+            ListUserClearanceParams,
+            Dict[str, Any],  # Expects dict
+            "List clearance level for users in ServiceNow",
+            "raw_dict",
+        ),
+        "list_groups_clearance": (
+            list_groups_clearance_tool,
+            ListGroupClearanceParams,
+            Dict[str, Any],  # Expects dict
+            "List clearance level for groups in ServiceNow",
+            "raw_dict",
+        ),
+        "update_group_clearance": (
+            update_group_clearance_tool,
+            UpdateGroupClearanceParams,
+            Dict[str, Any],  # Expects dict
+            "Update clearance level for a group in ServiceNow",
+            "raw_dict",
+        ),
+        "update_user_clearance": (
+            update_user_clearance_tool,
+            UpdateUserClearanceParams,
+            Dict[str, Any],  # Expects dict
+            "Update clearance level for a user in ServiceNow",
+            "raw_dict",
+        ),
         "create_user": (
             create_user_tool,
             CreateUserParams,

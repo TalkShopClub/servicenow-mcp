@@ -4,6 +4,7 @@ Tools module for the ServiceNow MCP server.
 
 # Import tools as they are implemented
 from servicenow_mcp.tools.request_tools import (
+    change_request_item_priority,
     create_item_request,
     list_item_requests,
 )
@@ -93,6 +94,10 @@ from servicenow_mcp.tools.user_tools import (
     add_group_members,
     remove_group_members,
     list_groups,
+    list_groups_clearance, 
+    list_users_clearance,
+    update_group_clearance, 
+    update_user_clearance
 )
 from servicenow_mcp.tools.workflow_tools import (
     activate_workflow,
@@ -243,6 +248,10 @@ __all__ = [
     "add_group_members",
     "remove_group_members",
     "list_groups",
+    "list_groups_clearance",
+    "list_users_clearance",
+    "update_group_clearance",
+    "update_user_clearance",
 
     # Story tools
     "create_story",
@@ -277,6 +286,7 @@ __all__ = [
     "update_hardware_asset",
 
     # Request tools
+    "change_request_item_priority",
     "create_item_request",
     "list_item_requests",
 

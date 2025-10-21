@@ -31,6 +31,7 @@ class CreateChangeRequestParams(BaseModel):
     category: Optional[str] = Field(None, description="Category of the change")
     requested_by: Optional[str] = Field(None, description="User who requested the change")
     assignment_group: Optional[str] = Field(None, description="Group assigned to the change")
+    assigned_to: Optional[str] = Field(None, description="Sys id of User assigned to the change")
     start_date: Optional[str] = Field(None, description="Planned start date (YYYY-MM-DD HH:MM:SS)")
     end_date: Optional[str] = Field(None, description="Planned end date (YYYY-MM-DD HH:MM:SS)")
     fields: Optional[Dict[str, str]] = Field(None, description="Dictionary of other field names and corresponding values to set for the POST request. Example: {'priority': '1'}")
@@ -47,6 +48,7 @@ class UpdateChangeRequestParams(BaseModel):
     impact: Optional[str] = Field(None, description="Impact of the change")
     category: Optional[str] = Field(None, description="Category of the change")
     assignment_group: Optional[str] = Field(None, description="Group assigned to the change")
+    assigned_to: Optional[str] = Field(None, description="Sys id of User assigned to the change")
     start_date: Optional[str] = Field(None, description="Planned start date (YYYY-MM-DD HH:MM:SS)")
     end_date: Optional[str] = Field(None, description="Planned end date (YYYY-MM-DD HH:MM:SS)")
     work_notes: Optional[str] = Field(None, description="Work notes to add to the change request")
@@ -254,6 +256,10 @@ def create_change_request(
         data["requested_by"] = validated_params.requested_by
     if validated_params.assignment_group:
         data["assignment_group"] = validated_params.assignment_group
+        data["state"] = "-4" # Assessment required
+    elif validated_params.assigned_to:
+        data["assigned_to"] = validated_params.assigned_to
+        data["state"] = "-4" # Assessment required
     if validated_params.start_date:
         data["start_date"] = validated_params.start_date
     if validated_params.end_date:
@@ -349,6 +355,10 @@ def update_change_request(
         data["category"] = validated_params.category
     if validated_params.assignment_group:
         data["assignment_group"] = validated_params.assignment_group
+        data["state"] = "-4" # Assessment required
+    elif validated_params.assigned_to:
+        data["assigned_to"] = validated_params.assigned_to
+        data["state"] = "-4" # Assessment required
     if validated_params.start_date:
         data["start_date"] = validated_params.start_date
     if validated_params.end_date:

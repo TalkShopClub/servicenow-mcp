@@ -47,6 +47,12 @@ class OrderCatalogItemParams(BaseModel):
     quantity: str = Field(..., description="The quantity of the item to be requested")
     short_description: str = Field(..., description="The short description of the item request")
 
+class ChangeRequestItemPriorityParams(BaseModel): 
+    """Parameters for changing the priority of a change request."""
+
+    change_request_sys_id: str = Field(..., description="The sys_id of the change request to be changed")
+    impact: str = Field(..., description="The impact of the change request item")
+    urgency: str = Field(..., description="The urgency of the change request item")
 
 class RequestAndCatalogItemResponse(BaseModel):
     """Response from create request.""" 
@@ -55,6 +61,54 @@ class RequestAndCatalogItemResponse(BaseModel):
     message: str = Field(..., description="Message describing the result")
     sys_id: Optional[str] = Field(None, description="ID of the item request")
     number: Optional[str] = Field(None, description="Number of the affected request")
+
+def change_request_item_priority(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: ChangeRequestItemPriorityParams,
+) -> RequestAndCatalogItemResponse:
+    """
+    Change the priority of a requested item.
+    """
+    api_url = f"{config.api_url}/table/sc_request/{params.change_request_sys_id}"
+    data = {    
+        "impact": params.impact,
+        "urgency": params.urgency
+    }
+    try:
+        # Get requested item record and update priority too 
+        requested_item_url = f"{config.api_url}/table/sc_req_item"
+        requested_item_resp = requests.get(
+            requested_item_url, 
+            headers=auth_manager.get_headers(), 
+            timeout=config.timeout,
+            params={"sysparm_query": f"request={params.change_request_sys_id}", "sysparm_fields": "sys_id"}
+        )
+        requested_item_resp.raise_for_status()
+        requested_item_sys_id = requested_item_resp.json().get("result", [])[0].get("sys_id")
+
+        # Update priority of requested item
+        requested_item_url = f"{config.api_url}/table/sc_req_item/{requested_item_sys_id}"
+        requested_item_resp = requests.patch(
+            requested_item_url,
+            json=data,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        requested_item_resp.raise_for_status()
+
+        response = requests.patch(
+            api_url,
+            json=data,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+        result = response.json().get("result", {})
+        return RequestAndCatalogItemResponse(success=True, message="Change request item priority changed successfully", sys_id=result.get("sys_id"))
+    except requests.RequestException as e:
+        logger.error(f"Failed to change request item priority: {e}")
+        return RequestAndCatalogItemResponse(success=False, message=f"Failed to change request item priority: {str(e)}") 
 
 def list_item_requests(
     config: ServerConfig,
