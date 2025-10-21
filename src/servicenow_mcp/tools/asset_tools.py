@@ -6,7 +6,7 @@ creating, updating, deleting, and transferring assets between users.
 """
 
 import logging
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 import requests
 from pydantic import BaseModel, Field
@@ -18,6 +18,16 @@ from servicenow_mcp.utils.resolvers import resolve_user_id, resolve_asset_id
 logger = logging.getLogger(__name__)
 
 
+class CreateCurrencyInstanceParams(BaseModel): 
+    """Parameters for creating a currency instance."""
+
+    asset_id: str = Field(..., description="Asset ID")
+    amount: str = Field(..., description="Amount")
+    currency: str = Field(..., description="Currency code")
+    field: Optional[str] = Field("cost", description="Field to create the currency instance for")
+    table: Optional[str] = Field("alm_asset", description="Table to create the currency instance for")
+
+
 class CreateAssetParams(BaseModel):
     """Parameters for creating an asset."""
 
@@ -27,6 +37,7 @@ class CreateAssetParams(BaseModel):
     assigned_to: Optional[str] = Field(None, description="User assigned to the asset (sys_id)")
     location: Optional[str] = Field(None, description="Location of the asset")
     cost: Optional[str] = Field(None, description="Cost of the asset")
+    currency: Optional[str] = Field(None, description="Currency code")
     purchase_date: Optional[str] = Field(None, description="Purchase date (YYYY-MM-DD)")
     warranty_expiration: Optional[str] = Field(None, description="Warranty expiration date (YYYY-MM-DD)")
     category: Optional[str] = Field(None, description="Asset category")
@@ -48,6 +59,7 @@ class UpdateAssetParams(BaseModel):
     assigned_to: Optional[str] = Field(None, description="User assigned to the asset (sys_id)")
     location: Optional[str] = Field(None, description="Location of the asset")
     cost: Optional[str] = Field(None, description="Cost of the asset")
+    currency: Optional[str] = Field(None, description="Currency code")
     purchase_date: Optional[str] = Field(None, description="Purchase date (YYYY-MM-DD)")
     warranty_expiration: Optional[str] = Field(None, description="Warranty expiration date (YYYY-MM-DD)")
     category: Optional[str] = Field(None, description="Asset category")
@@ -360,6 +372,45 @@ def update_hardware_asset(
             asset_tag=result.get("asset_tag"),
         )
 
+def create_currency_instance(
+
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: CreateCurrencyInstanceParams,
+) -> Dict[str, Any]:
+    """
+    Create a new currency instance in ServiceNow.
+    """
+    api_url = f"{config.api_url}/table/fx_currency_instance"
+    data = {
+        "asset_id": params.asset_id,
+        "amount": params.amount,
+        "currency": params.currency,
+        "field": params.field,
+        "table": params.table,
+    }
+    try:
+        response = requests.post(
+            api_url,
+            json=data,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+        result = response.json().get("result", {})
+        return {
+            "success": True,
+            "message": "Currency instance created successfully",
+            "currency_instance": result,
+        }
+    except requests.RequestException as e:
+        logger.error(f"Failed to create currency instance: {e}")
+
+        return {
+            "success": False,
+            "message": f"Failed to create currency instance: {str(e)}",
+        }
+
 def create_asset(
     config: ServerConfig,
     auth_manager: AuthManager,
@@ -401,6 +452,8 @@ def create_asset(
         data["location"] = params.location
     if params.cost:
         data["cost"] = params.cost
+    if params.currency:
+        data["cost.currency"] = params.currency
     if params.purchase_date:
         data["purchase_date"] = params.purchase_date
     if params.warranty_expiration:
@@ -495,6 +548,8 @@ def update_asset(
         data["location"] = params.location
     if params.cost:
         data["cost"] = params.cost
+    if params.currency:
+        data["cost.currency"] = params.currency
     if params.purchase_date:
         data["purchase_date"] = params.purchase_date
     if params.warranty_expiration:

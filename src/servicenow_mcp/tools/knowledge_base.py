@@ -56,6 +56,7 @@ class CreateArticleParams(BaseModel):
     knowledge_base: str = Field(..., description="The knowledge base to create the article in")
     category: str = Field(..., description="Category for the article")
     keywords: Optional[str] = Field(None, description="Keywords for search")
+    author: Optional[str] = Field(None, description="Author of the article")
     article_type: Optional[str] = Field("html", description="The type of article. Options are 'text' or 'wiki'. text lets the text field support html formatting. wiki lets the text field support wiki markup.")
 
 
@@ -66,6 +67,7 @@ class UpdateArticleParams(BaseModel):
     title: Optional[str] = Field(None, description="Updated title of the article")
     text: Optional[str] = Field(None, description="Updated main body text for the article. Field supports html formatting and wiki markup based on the article_type. HTML is the default.")
     short_description: Optional[str] = Field(None, description="Updated short description")
+    author: Optional[str] = Field(None, description="Updated author of the article")
     category: Optional[str] = Field(None, description="Updated category for the article")
     keywords: Optional[str] = Field(None, description="Updated keywords for search")
 
@@ -425,6 +427,8 @@ def create_article(
         data["short_description"] = params.title
     if params.keywords:
         data["keywords"] = params.keywords
+    if params.author:
+        data["author"] = params.author
 
     # Make request
     try:
@@ -485,6 +489,8 @@ def update_article(
         data["kb_category"] = params.category
     if params.keywords:
         data["keywords"] = params.keywords
+    if params.author:
+        data["author"] = params.author
 
     # Make request
     try:
