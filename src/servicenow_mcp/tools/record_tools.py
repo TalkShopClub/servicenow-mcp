@@ -25,6 +25,18 @@ class CreateProblemParams(BaseModel):
     assigned_to: Optional[str] = Field(None, description="User assigned to the problem (user sys_id or username)")
     fields: Optional[Dict[str, str]] = Field(None, description="Dictionary of other field names and corresponding values to set for the POST request. Example: {'priority': '1'}")
 
+class UpdateProblemParams(BaseModel):
+    """Parameters for updating a problem."""
+
+    problem_id: str = Field(..., description="Problem ID or sys_id")
+    state: Optional[str] = Field(None, description="State of the problem")
+    resolution_code: Optional[str] = Field(None, description="Close code for the problem")
+    close_notes: Optional[str] = Field(None, description="Close notes for the problem")
+    short_description: Optional[str] = Field(None, description="Short description of the problem")
+    urgency: Optional[str] = Field(None, description="Urgency level (1=High, 2=Medium, 3=Low)")
+    impact: Optional[str] = Field(None, description="Impact level (1=High, 2=Medium, 3=Low)")
+    assigned_to: Optional[str] = Field(None, description="User assigned to the problem (user sys_id or username)")
+    work_notes: Optional[str] = Field(None, description="Work notes to add to the problem")
 
 class ProblemResponse(BaseModel):
     """Response from problem operations."""
@@ -103,8 +115,76 @@ def create_problem(
         )
 
 
+def update_problem(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: UpdateProblemParams,
+) -> ProblemResponse:
+    """
+    Update a problem in ServiceNow.
+    """
+    api_url = f"{config.api_url}/table/problem/{params.problem_id}"
 
+    # Build request data
+    data = {}
 
+    if params.state:
+        data["state"] = params.state.capitalize()
+    if params.resolution_code:
+        data["resolution_code"] = params.resolution_code
+    if params.close_notes:
+        data["close_notes"] = params.close_notes
+    if params.short_description:
+        data["short_description"] = params.short_description
+    if params.urgency:
+        data["urgency"] = params.urgency
+    if params.impact:
+        data["impact"] = params.impact
+    if params.assigned_to:
+        data["assigned_to"] = params.assigned_to
+    if params.work_notes:
+        data["work_notes"] = params.work_notes
+
+    # If state is Closed, we need to set the resolution_code and close_notes 
+    if params.state and params.state.capitalize() in ["Closed", "107"]:
+        if not params.resolution_code:
+            return ProblemResponse(
+                success=False,
+                message="Resolution code is required when state is Closed or Cancelled",
+            )
+        if not params.close_notes:
+            return ProblemResponse(
+                success=False,
+                message="Close notes are required when state is Closed or Cancelled",
+            )
+        data["resolution_code"] = params.resolution_code
+        data["close_notes"] = params.close_notes
+
+    # Make request
+    try:
+        response = requests.patch(
+            api_url,
+            json=data,
+            headers=auth_manager.get_headers(),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+
+        result = response.json().get("result", {})
+
+        return ProblemResponse(
+            success=True,
+            message="Problem updated successfully",
+            problem_id=result.get("sys_id"),
+            problem_number=result.get("number"),
+        )
+
+    except requests.RequestException as e:
+        logger.error(f"Failed to update problem: {e}")
+        return ProblemResponse(
+            success=False,
+            message=f"Failed to update problem: {str(e)}",
+        )
 
 def _resolve_user_id(
     config: ServerConfig,

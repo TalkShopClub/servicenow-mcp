@@ -260,6 +260,21 @@ def update_incident(
     if params.close_code:
         data["close_code"] = params.close_code
 
+    # If state is Closed or Cancelled, we need to set the close_code and close_notes 
+    if params.state and params.state in ["7", "8", "Closed", "Canceled"]: 
+        if not params.close_code:
+            return IncidentResponse(
+                success=False,
+                message="Close code is required when state is Closed or Cancelled",
+            )
+        if not params.close_notes:
+            return IncidentResponse(
+                success=False,
+                message="Close notes are required when state is Closed or Cancelled",
+            )
+        data["close_code"] = params.close_code
+        data["close_notes"] = params.close_notes
+
     # Make request
     try:
         response = requests.put(
